@@ -247,6 +247,7 @@ init_install
 for tool in ${selection,,}; do
   tool_list=${!tools[*]}
   if in_array "$tool" ${tool_list,,}; then
+    export url script
     IFS='|' read url script post_install <<< "${tools[$tool]}"
     print_message "Installing ${tool^}"
     [[ $url ]] && git_install "$url" "$script"
