@@ -29,17 +29,17 @@ It already configures all the tools for you to work, you won't need to configure
 ### Script to install the most popular tools used when looking for vulnerabilities for a Bug bounty or Pentest bounty program. :shipit:
 
 
-List1|List2|List3|List4|List5|List6|List7
------|-----|-----|-----|-----|-----|-----
-Dirsearch|XSStrike|Knock|WAFNinja|Bluto|Anon-SMS|WPSeku
-Rustscan|The-endorser|Whatweb|Phoneinfoga|Sqlmap-dev|Sayhello|Gf-Patterns
-Sublist3r|Twintproject|Wpscan|Zphisher|Parsero|Seeker|GitDumper
-SocialFish|Osintgram|Massdns|Git-dumper|Asnlookup|Sherlok|Waybackurls
-Unfurl|Saycheese|Httprobe|Ngrok|Wfuzz|TheHarvester|Brave
-Aquatone|ParamSpider|Gau|Assetfinder|Subfinder|Takeover|Sherlock
-Httpx|Infoga|Gobuster|Anonsurf|Gittools|Droopescan|Pwndb
-Joomscan|Sslyze|Sslscan|Nuclei|Hakrawler|A2SV|Twitter-info
-Ffuf|Feroxbuster|KiteRunner|Metagoofil|
+List1|List2|List3|List4|List5|List6|List7|List8
+-----|-----|-----|-----|-----|-----|-----|-----
+Dirsearch|XSStrike|Knock|WAFNinja|Bluto|Anon-SMS|WPSeku|Urldedupe
+Rustscan|The-endorser|Whatweb|Phoneinfoga|Sqlmap-dev|Sayhello|Gf-Patterns|Crlfuzz
+Sublist3r|Twintproject|Wpscan|Zphisher|Parsero|Seeker|GitDumper|Gospider
+SocialFish|Osintgram|Massdns|Git-dumper|Asnlookup|Sherlok|Waybackurls|Crobat
+Unfurl|Saycheese|Httprobe|Ngrok|Wfuzz|TheHarvester|Brave|Naabu
+Aquatone|ParamSpider|Gau|Assetfinder|Subfinder|Takeover|Sherlock|Gauplus
+Httpx|Infoga|Gobuster|Anonsurf|Gittools|Droopescan|Pwndb|Notify
+Joomscan|Sslyze|Sslscan|Nuclei|Hakrawler|A2SV|Twitter-info|Dnsx
+Ffuf|Feroxbuster|KiteRunner|Metagoofil|Anew|Dalfox|Kxss|Qsreplace|Uro
 
 
 ### Full installation
