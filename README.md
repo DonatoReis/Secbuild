@@ -23,10 +23,14 @@ It already configures all the tools for you to work, you won't need to configure
 
 > Status: Developing ⚠️
 
+
 ### Tool updates every linux directory and all dependencies needed to work
    - tor, argparse, pyrit, requests, proxychains4, aptitude, Seclists, synaptic, brave, hashcat, docker.io, exploitdb-papers, exploitdb-bin-sploits etc...
 
+
 ### Script to install the most popular tools used when looking for vulnerabilities for a Bug bounty or Pentest bounty program.
+
+
 
 
 <p align="center" dir="auto"><strong>Tools used - You must need to install these tools to use this script</strong><br></p>
