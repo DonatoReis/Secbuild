@@ -122,7 +122,7 @@ init_install() {
     printf "\n${CBold}${CFGWhite}┃════════════════════════════════════════════════════════════════════>>>${CReset}\n\n"
     apt -y install python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev virtualbox-guest-x11 jq ruby-full libcurl4-openssl-dev ruby virtualbox-guest-utils libxml2 libxml2-dev libxslt1-dev ruby-dev build-essential libgmp-dev hcxtools hcxdumptool zlib1g-dev perl chromium libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl htop libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion git bzr mercurial build-essential libssl-dev libffi-dev python2-dev python2 python-dev-is-python3 ruby-ffi-yajl libldns-dev nmap rename docker.io parsero apache2 amass feroxbuster joomscan uniscan ssh tor privoxy wifite proxychains4 hashcat aptitude synaptic lolcat python3.9-venv dialog golang-go exploitdb exploitdb-papers exploitdb-bin-sploits graphviz virtualenv reaver bats metagoofil openssl
     sudo $SUDO_OPT pip3 install --upgrade pip
-    sudo $SUDO_OPT pip3 install argparse osrframework py-altdns==1.0.2 requests wfuzz holehe twint bluto droopescan
+    sudo $SUDO_OPT pip3 install argparse osrframework py-altdns==1.0.2 requests wfuzz holehe twint bluto droopescan uro
     sudo $SUDO_OPT pip install one-lin3r bluto dnspython requests win_unicode_console colorama netaddr
     gem install typhoeus opt_parse_validator blunder wpscan
     mkdir -p "$HOME/.local"
