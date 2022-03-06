@@ -3,7 +3,7 @@
 <p align="center" dir="auto">
   <a target="_blank" rel="noopener noreferrer" href="https://user-images.githubusercontent.com/93531354/155890601-5919d2fe-81be-486e-91d1-d93f8ef734cb.png"><img alt="Arno" src="https://user-images.githubusercontent.com/93531354/155890601-5919d2fe-81be-486e-91d1-d93f8ef734cb.png" height="240" style="max-width: 100%;"></a>
   <br>
-  <strong>Arno - A workflow engine for Bug Bounty and Pentest</strong> 
+  <strong>Arno - An automation tool for Bug Bounty and Pentest</strong> 
   <br><br>
   <strong>Recode The Copyright Is Not Make You A Coder</strong>
 </p>  
@@ -57,3 +57,5 @@ curl -sL https://github.com/DonatoReis/arno/raw/main/install.sh | sudo bash
 git clone https://github.com/DonatoReis/arno
 sudo arno/install.sh
 ```
+
+Warning: This code was originally created for personal use, it generates a substantial amount of traffic, please use with caution.
