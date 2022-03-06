@@ -4,8 +4,8 @@
   <a target="_blank" rel="noopener noreferrer" href="https://user-images.githubusercontent.com/93531354/155890601-5919d2fe-81be-486e-91d1-d93f8ef734cb.png"><img alt="Arno" src="https://user-images.githubusercontent.com/93531354/155890601-5919d2fe-81be-486e-91d1-d93f8ef734cb.png" height="240" style="max-width: 100%;"></a>
   <br>
   <strong>Arno - A workflow engine for Bug Bounty and Pentest</strong> 
-  <br>
-  <strong>Recode The Copyright Is Not Make You A Coder Dude</strong>
+  <br><br>
+  <strong>Recode The Copyright Is Not Make You A Coder</strong>
 </p>  
   
 <div>
@@ -31,7 +31,7 @@ It already configures all the tools for you to work, you won't need to configure
 
 List1|List2|List3|List4|List5|List6|List7
 -----|-----|-----|-----|-----|-----|-----
-Dirsearch|XSStrike|Knockpy|WAFNinja|Bluto|Anon-SMS|WPSeku
+Dirsearch|XSStrike|Knock|WAFNinja|Bluto|Anon-SMS|WPSeku
 Rustscan|The-endorser|Whatweb|Phoneinfoga|Sqlmap-dev|Sayhello|Gf-Patterns
 Sublist3r|Twintproject|Wpscan|Zphisher|Parsero|Seeker|GitDumper
 SocialFish|Osintgram|Massdns|Git-dumper|Asnlookup|Sherlok|Waybackurls
@@ -39,6 +39,7 @@ Unfurl|Saycheese|Httprobe|Ngrok|Wfuzz|TheHarvester|Brave
 Aquatone|ParamSpider|Gau|Assetfinder|Subfinder|Takeover|Sherlock
 Httpx|Infoga|Gobuster|Anonsurf|Gittools|Droopescan|Pwndb
 Joomscan|Sslyze|Sslscan|Nuclei|Hakrawler|A2SV|Twitter-info
+Ffuf|Feroxbuster|KiteRunner|Metagoofil|
 
 
 ### Full installation
