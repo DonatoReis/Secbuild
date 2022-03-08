@@ -87,7 +87,7 @@ export -f system_update
 
 system_upgrade() {
   print_message 'Updating system'
-  apt -y full-upgrade && apt -y dist-upgrade && apt -y -f install
+  apt -y full-upgrade
   sudo $SUDO_OPT pip3 install --upgrade pip
   sudo $SUDO_OPT pip3 install --upgrade osrframework
   apt -y update && apt -y autoremove && apt -y autoclean
