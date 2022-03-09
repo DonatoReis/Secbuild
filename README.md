@@ -3,7 +3,7 @@
 <p align="center" dir="auto">
   <a target="_blank" rel="noopener noreferrer" href="https://user-images.githubusercontent.com/93531354/155890601-5919d2fe-81be-486e-91d1-d93f8ef734cb.png"><img alt="Arno" src="https://user-images.githubusercontent.com/93531354/155890601-5919d2fe-81be-486e-91d1-d93f8ef734cb.png" height="240" style="max-width: 100%;"></a>
   <br>
-  <strong>Arno - An automation tool for Bug Bounty and Pentest</strong> 
+  <strong>Arno - An automation tool to install the most popular tools for bug bounty or pentesting</strong> 
   <br><br>
   <strong>Recode The Copyright Is Not Make You A Coder</strong>
 </p>  
@@ -18,7 +18,7 @@
   </p>
 </div>
 
-## Complete shell script tool for Bug bounty or Pentest ! It will save 90% of your time when setting up your machine to work.
+## An automation tool to install the most popular tools for bug bounty or pentesting! This will save you 90% of your time when setting up your machine to work.
 It already configures all the tools for you to work, you won't need to configure it manually.
 
 > Status: Developing ⚠️
