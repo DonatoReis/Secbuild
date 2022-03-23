@@ -35,6 +35,14 @@ It already configures all the tools for you to work, you won't need to configure
 
 <p align="center" dir="auto"><strong>Tools used - You must need to install these tools to use this script</strong><br></p>
 
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+<body> 
 <ul class="contains-task-list">
     <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Amass</li>
     <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Anon-SMS</li>
@@ -177,7 +185,9 @@ It already configures all the tools for you to work, you won't need to configure
     <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Xsstrike</li>
     <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Zphisher</li>
 </ul>
-
+  </head>
+    </body>
+</html>
 
 ### Full installation
 #### cURL, Recommends installing in root mode
