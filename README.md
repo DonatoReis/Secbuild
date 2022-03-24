@@ -30,157 +30,158 @@ It already configures all the tools for you to work, you won't need to configure
 
 ### Script to install the most popular tools used when looking for vulnerabilities for a Bug bounty or Pentest bounty program.
 
-
+## Operating Systems Supported
+| OS         | Supported | Easy Install  | Tested        | 
+|------------|-----------|---------------|---------------|
+| Ubuntu     |    No     | Yes           | Ubuntu 20.04  |
+| Kali       |    Yes    | Yes           | Kali 2021.4   |
+| Debian     |    Yes    | Yes           | Debian 10     |
+| Arch Linux |    Yes    | No            | Yes           |
 
 <p align="center" dir="auto"><strong>Tools used - You must need to install these tools to use this script</strong><br></p>
 
 
-<html>
-  <body>
-<ul type="" class="contains-task-list">
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Amass</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Anon-SMS</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Asnlookup</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  A2SV</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Arjun</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  aiodnsbrute</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  anew</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Anonsurf</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  anti-burl</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  aquatone</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  assetfinder</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Brave</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Bluto</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Corsy</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  CrackMapExec</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  cent</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  cf-check</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  chaos-client</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  cngo</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  commix</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  concurl</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  crlfuzz</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  crobat</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  ctfr</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  DNSCewl</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Docker</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  dalfox</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  dirdar</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Dirsearch</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  dnscewl</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  dnsgen</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  dnsrecon</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  dnsvalidator</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  dnsx</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Droopescan</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  ERLPopper</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  exclude-cdn</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  feroxbuster</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  fff</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  ffuf</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  ffuz</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  findomain</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Feroxbuster</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Gf-Patterns</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Go</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Gxss</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  gau</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  gauplus</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  getJS</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  gf</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  gfpatterns</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  github-endpoints</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  github-subdomains</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Gittools</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Git-dumper</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  gobuster</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  google-chrome</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  gorgo</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  gospider</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  gowitness</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  gron</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  gxss</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  hakrawler</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  http2smugl</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  httprobe</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  httpx</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Interlace</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  interactsh-client</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Infoga</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  jaeles</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Joomscan</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  kiterunner</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  kxss</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Knock</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  LinkFinder</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  leaky-paths</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  masscan</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  massdns</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Metagoofil</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  medusa</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  meg</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  naabu</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Ngrok</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  nmap</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  notify</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  nuclei</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  OpenRedireX</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Osintgram</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  ParamSpider</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Parsero</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  phantomjs</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Phoneinfoga</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Pyrit</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  proxychains-ng</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Pwndb</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  puredns</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  qsreplace</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  RustScan</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  responder</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  SecLists</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Seeker</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  s3scanner</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  scrying</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  shuffledns</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Sslyze</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Sslscan</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  sn0int</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  soxy</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  sqlmap</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  subfinder</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  sublist3r</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Saycheese</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Sayhello</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Sherlok</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  subjack</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  subjs</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  SocialFish</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Takeover</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  testssl</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  TheHarvester</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Twitter-info</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Twintproject</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  The-endorser</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  tlscout</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  ufw</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Unfurl</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  unimap</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  urldedupe</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  uro</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  wafw00f</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Wfuzz</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  WPSeku</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Wafninja</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  waybackurls</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  webscreenshot</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Whatweb</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  whois</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  wpscan</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Xsstrike</li>
-    <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Zphisher</li>
-  </ul>
- </body>
-</html>
+- [x]  Amass
+- [x]  Anon-SMS
+- [x]  Asnlookup
+- [x]  A2SV
+- [x]  Arjun
+- [x]  aiodnsbrute
+- [x]  anew
+- [x]  Anonsurf
+- [x]  anti-burl
+- [x]  aquatone
+- [x]  assetfinder
+- [x]  Brave
+- [x]  Bluto
+- [x]  Corsy
+- [x]  CrackMapExec
+- [x]  cent
+- [x]  cf-check
+- [x]  chaos-client
+- [x]  cngo
+- [x]  commix
+- [x]  concurl
+- [x]  crlfuzz
+- [x]  crobat
+- [x]  ctfr
+- [x]  DNSCewl
+- [x]  Docker
+- [x]  dalfox
+- [x]  dirdar
+- [x]  Dirsearch
+- [x]  dnscewl
+- [x]  dnsgen
+- [x]  dnsrecon
+- [x]  dnsvalidator
+- [x]  dnsx
+- [x]  Droopescan
+- [x]  ERLPopper
+- [x]  exclude-cdn
+- [x]  feroxbuster
+- [x]  fff
+- [x]  ffuf
+- [x]  ffuz
+- [x]  findomain
+- [x]  Feroxbuster
+- [x]  Gf-Patterns
+- [x]  Go
+- [x]  Gxss
+- [x]  gau
+- [x]  gauplus
+- [x]  getJS
+- [x]  gf
+- [x]  gfpatterns
+- [x]  github-endpoints
+- [x]  github-subdomains
+- [x]  Gittools
+- [x]  Git-dumper
+- [x]  gobuster
+- [x]  google-chrome
+- [x]  gorgo
+- [x]  gospider
+- [x]  gowitness
+- [x]  gron
+- [x]  gxss
+- [x]  hakrawler
+- [x]  http2smugl
+- [x]  httprobe
+- [x]  httpx
+- [x]  Interlace
+- [x]  interactsh-client
+- [x]  Infoga
+- [x]  jaeles
+- [x]  Joomscan
+- [x]  kiterunner
+- [x]  kxss
+- [x]  Knock
+- [x]  LinkFinder
+- [x]  leaky-paths
+- [x]  masscan
+- [x]  massdns
+- [x]  Metagoofil
+- [x]  medusa
+- [x]  meg
+- [x]  naabu
+- [x]  Ngrok
+- [x]  nmap
+- [x]  notify
+- [x]  nuclei
+- [x]  OpenRedireX
+- [x]  Osintgram
+- [x]  ParamSpider
+- [x]  Parsero
+- [x]  phantomjs
+- [x]  Phoneinfoga
+- [x]  Pyrit
+- [x]  proxychains-ng
+- [x]  Pwndb
+- [x]  puredns
+- [x]  qsreplace
+- [x]  RustScan
+- [x]  responder
+- [x]  SecLists
+- [x]  Seeker
+- [x]  s3scanner
+- [x]  scrying
+- [x]  shuffledns
+- [x]  Sslyze
+- [x]  Sslscan
+- [x]  sn0int
+- [x]  soxy
+- [x]  sqlmap
+- [x]  subfinder
+- [x]  sublist3r
+- [x]  Saycheese
+- [x]  Sayhello
+- [x]  Sherlok
+- [x]  subjack
+- [x]  subjs
+- [x]  SocialFish
+- [x]  Takeover
+- [x]  testssl
+- [x]  TheHarvester
+- [x]  Twitter-info
+- [x]  Twintproject
+- [x]  The-endorser
+- [x]  tlscout
+- [x]  ufw
+- [x]  Unfurl
+- [x]  unimap
+- [x]  urldedupe
+- [x]  uro
+- [x]  wafw00f
+- [x]  Wfuzz
+- [x]  WPSeku
+- [x]  Wafninja
+- [x]  waybackurls
+- [x]  webscreenshot
+- [x]  Whatweb
+- [x]  whois
+- [x]  wpscan
+- [x]  Xsstrike
+- [x]  Zphisher
+
 
 ### Full installation
 #### cURL, Recommends installing in root mode
