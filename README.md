@@ -34,7 +34,10 @@ It already configures all the tools for you to work, you won't need to configure
 
 <p align="center" dir="auto"><strong>Tools used - You must need to install these tools to use this script</strong><br></p>
 
-<ul class="contains-task-list">
+
+<html>
+  <body>
+<ul type="" class="contains-task-list">
     <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Amass</li>
     <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Anon-SMS</li>
     <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Asnlookup</li>
@@ -175,9 +178,9 @@ It already configures all the tools for you to work, you won't need to configure
     <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  wpscan</li>
     <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Xsstrike</li>
     <li class="task-list-item"><input type="checkbox" id="" disabled="" class="task-list-item-checkbox" checked="">  Zphisher</li>
-</ul>
-
-
+  </ul>
+ </body>
+</html>
 
 ### Full installation
 #### cURL, Recommends installing in root mode
