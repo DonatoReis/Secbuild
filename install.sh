@@ -1,14 +1,25 @@
 #!/usr/bin/env bash
-version=1.0.6
+version=1.0.8
 usage() {
-  printf 'MSG\n'
+  usage=' Usage: $basename [OPTIONS]
+
+DESCRIPTION
+  Arno is a based script for automatize installation
+
+OPTIONS
+  General options
+    -h,--help,help
+    -l,--list
+    -v,--version
+    -f,--force-update'
+  printf "$usage\n"
 }
 
 # ANSI Colors
 load_ansi_colors() {
   # @C FG Color
   #    |-- foreground color
-  export CReset='\e[m' CFGBlack='\e[30m' CFGRed='\e[31m' CFGGreen='\e[32m' \
+  export CReset=$'\e[m' CFGBlack='\e[30m' CFGRed='\e[31m' CFGGreen='\e[32m' \
     CFGYellow='\e[33m' CFGBlue='\e[34m' CFGPurple='\e[35m' CFGCyan='\e[36m' \
     CFGWhite='\e[37m'
   # @C BG Color
@@ -120,10 +131,11 @@ init_install() {
   print_message 'Ferramenta em script Bash Completa para Bug bounty ou Pentest ! Vai poupar seu Tempo na hora de configurar sua máquina para trabalhar.'
   printf "\n${CBold}${CFGWhite}=====================================================>${CReset}\n\n"
   if [[ ! -f $HOME/.local/.arno_init_install_successful ]]; then
-    apt -y install python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev xvfb debian-keyring bison fail2ban firebird-dev flex grc git jq libgcrypt20-dev libgpg-error-dev libgtk2.0-dev libidn11-dev libmemcached-dev libpcap-dev libpcre3-dev libpq-dev libssh-dev libssl-dev libsvn-dev net-tools p7zip rubygems zsh ufw zsh-autosuggestions zsh-syntax-highlighting virtualbox-guest-x11 jq ruby-full libcurl4-openssl-dev virtualbox-guest-utils libxml2 libxml2-dev libxslt1-dev ruby-dev build-essential libgmp-dev hcxtools hcxdumptool zlib1g-dev perl chromium zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion git bzr mercurial build-essential libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev nmap rename docker.io parsero apache2 amass joomscan uniscan ssh tor privoxy wifite proxychains4 hashcat aptitude synaptic lolcat python3.9-venv dialog golang-go exploitdb exploitdb-papers exploitdb-bin-sploits graphviz kali-desktop-gnome virtualenv reaver bats metagoofil openssl feroxbuster
+    apt -y install python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev virtualbox-guest-x11 jq ruby-full libcurl4-openssl-dev ruby virtualbox-guest-utils libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxtools hcxdumptool zlib1g-dev perl chromium zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion git bzr mercurial build-essential libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev nmap rename docker.io parsero apache2 amass joomscan uniscan ssh tor privoxy wifite proxychains4 hashcat aptitude synaptic lolcat dialog golang-go exploitdb exploitdb-papers exploitdb-bin-sploits graphviz virtualenv reaver bats metagoofil openssl feroxbuster cargo
+    apt -y install kali-desktop-gnome gospider cmake crackmapexec realtek-rtl88xxau-dkms arjun dnsgen s3scanner
     sudo $SUDO_OPT pip3 install --upgrade pip
-    sudo $SUDO_OPT pip3 install argparse osrframework py-altdns==1.0.2 requests wfuzz holehe twint bluto droopescan uro arjun dnsgen s3scanner
-    sudo $SUDO_OPT pip install one-lin3r bluto dnspython requests win_unicode_console colorama netaddr aiodnsbrute webscreenshot
+    sudo $SUDO_OPT pip3 install osrframework py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot
+    sudo $SUDO_OPT pip install dnspython netaddr
     gem install typhoeus opt_parse_validator blunder wpscan
     mkdir -p "$HOME/.local"
     > $HOME/.local/.arno_init_install_successful
@@ -144,9 +156,9 @@ read_package_ini() {
   local sec url script post_install
   cfg_parser "$inifile"
   while read sec; do
-    unset url script post_install
+    unset url script depends post_install
     cfg_section_$sec 2>&-
-    tools[${sec,,}]="$url|$script|$post_install"
+    tools[${sec,,}]="$url|$script|$depends|$post_install"
   done < <(cfg_listsections "$inifile")
 }
 
@@ -178,6 +190,25 @@ git_install() {
   fi
 }
 
+checklist_report() {
+  CFGBRed=$'\e[91m'
+  CFGBGreen=$'\e[92m'
+  print_message 'Checklist report from tools install'
+  for tool in ${selection,,}; do
+    tool_list=${!tools[*]}
+    if in_array "$tool" ${tool_list,,}; then
+      IFS='|' read url script depends post_install <<< "${tools[$tool]}"
+      if [[ $depends ]]; then
+        status=$'Fail'
+        if type -t $depends >/dev/null; then
+          status='Ok'
+        fi
+        echo "${tool^} [$status]"
+      fi
+    fi
+  done | column | sed "s/\[Ok\]/[${CFGBGreen}Ok${CReset}]/g;s/\[Fail\]/[${CFGBRed}Fail${CReset}]/g"
+}
+
 shopt -s extglob
 dirname=${BASH_SOURCE%/*}
 basename=${0##*/}
@@ -206,10 +237,12 @@ while [[ $1 ]]; do
       ;;
     -f|--force-update)
       force_update=1
+      apt -f install
+      rm -f $HOME/.local/.arno_init_install_successful
       shift
       ;;
     -l|--list)
-      [[ -f "$inifile" ]] && pkgs=$(grep -oP '^\[)[^]]+' $inifile)
+      [[ -f "$inifile" ]] && pkgs=$(grep -oP '(?<=^\[)[^]]+' $inifile)
       echo "  Uso: ./$basename" $pkgs
       exit 0
       ;;
@@ -245,12 +278,15 @@ for tool in ${selection,,}; do
   tool_list=${!tools[*]}
   if in_array "$tool" ${tool_list,,}; then
     export url script
-    IFS='|' read url script post_install <<< "${tools[$tool]}"
-    print_message "Installing ${tool^}"
-    [[ $url ]] && git_install "$url" "$script"
-    [[ $post_install ]] && {
-      result=$(bash -c "$post_install" 2>>$logerr >>$logfile) | progressbar -s normal -m "${tool^}: Installation"
-    }
+    IFS='|' read url script depends post_install <<< "${tools[$tool]}"
+    if [[ $url || $post_install ]]; then
+      print_message "Installing ${tool^}"
+      [[ $url ]] && git_install "$url" "$script"
+      [[ $post_install ]] && {
+        result=$(bash -c "$post_install" 2>>$logerr >>$logfile) | progressbar -s normal -m "${tool^}: Installation"
+      }
+    fi
   fi
 done
 system_upgrade
+checklist_report
