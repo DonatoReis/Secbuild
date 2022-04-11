@@ -73,7 +73,7 @@ banner() {
  ░███    ░███  ░███    ░███  ░███  ░░█████ ░░███     ███ 
  █████   █████ █████   █████ █████  ░░█████ ░░░███████░  
 ░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░    ░░░░░    ░░░░░░░
-                                       ➥ version: $version'
+                                       ➥ version: '$version''
 
   social="   A Reconaissance Tool's Collection.
 
