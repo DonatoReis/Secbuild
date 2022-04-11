@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version=1.0.8
+version=1.0.9
 usage() {
   usage=' Usage: $basename [OPTIONS]
 
@@ -64,26 +64,26 @@ banner_color() {
 }
 
 banner() {
-  logo=' █████╗ ██████╗ ███╗   ██╗ ██████╗
-██╔══██╗██╔══██╗████╗  ██║██╔═══██╗
-███████║██████╔╝██╔██╗ ██║██║   ██║
-██╔══██║██╔══██╗██║╚██╗██║██║   ██║
-██║  ██║██║  ██║██║ ╚████║╚██████╔╝
-╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝'
+  logo='
+   █████████   ███████████   ██████   █████    ███████ ®   
+  ███░░░░░███ ░░███░░░░░███ ░░██████ ░░███   ███░░░░░███ 
+ ░███    ░███  ░███    ░███  ░███░███ ░███  ███     ░░███
+ ░███████████  ░██████████   ░███░░███░███ ░███      ░███
+ ░███░░░░░███  ░███░░░░░███  ░███ ░░██████ ░███      ░███
+ ░███    ░███  ░███    ░███  ░███  ░░█████ ░░███     ███ 
+ █████   █████ █████   █████ █████  ░░█████ ░░░███████░  
+░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░    ░░░░░    ░░░░░░░
+                                       ➥ version: $version'
+
   social="   A Reconaissance Tool's Collection.
 
-╔════════════════════════════════════╗
-║                                    ║
-║ https://t.me/PeakyBlindersW        ║
-║                                    ║
-║ https://github.com/DonatoReis/arno ║
-║                                    ║
-║      Discord Community             ║
-║ https://discord.gg/Z2C2CyVZFU      ║
-╚════════════════════════════════════╝
-                              version: $version
+ https://t.me/PeakyBlindersW
 
-Recode The Copyright Is Not Make You A Coder Dude"
+     〔Discord Community〕
+ https://discord.gg/Z2C2CyVZFU
+
+
+»» Recode The Copyright Is Not Make You A Coder Dude"
   [[ -x /usr/games/lolcat ]] &&
     /usr/games/lolcat <(printf "$logo\n$social\n") ||
     { banner_color "$logo"; echo "$social"; }
@@ -98,10 +98,9 @@ export -f system_update
 
 system_upgrade() {
   print_message 'Updating system'
-  apt -y full-upgrade
-  sudo $SUDO_OPT pip3 install --upgrade pip
-  sudo $SUDO_OPT pip3 install --upgrade osrframework
+  apt -y dist-upgrade
   apt -y autoremove
+  apt -y autoclean
 }
 
 check_dependencies() {
@@ -127,15 +126,19 @@ init_install() {
   export DEBIAN_FRONTEND=noninteractive
   mkdir -p "$srcdir"
   system_update
+  if [[ $force_update == 1 ]]; then
+    apt -f install
+    apt --fix-broken install -y
+    dpkg --configure -a
+    rm -f $HOME/.local/.arno_init_install_successful
+  fi
   # REQUIREMENTS
-  print_message 'Ferramenta em script Bash Completa para Bug bounty ou Pentest ! Vai poupar seu Tempo na hora de configurar sua máquina para trabalhar.'
+  print_message 'Complete tool to install and configure various tools for pentesting.'
   printf "\n${CBold}${CFGWhite}=====================================================>${CReset}\n\n"
   if [[ ! -f $HOME/.local/.arno_init_install_successful ]]; then
-    apt -y install python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev virtualbox-guest-x11 jq ruby-full libcurl4-openssl-dev ruby virtualbox-guest-utils libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxtools hcxdumptool zlib1g-dev perl chromium zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion git bzr mercurial build-essential libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev nmap rename docker.io parsero apache2 amass joomscan uniscan ssh tor privoxy wifite proxychains4 hashcat aptitude synaptic lolcat dialog golang-go exploitdb exploitdb-papers exploitdb-bin-sploits graphviz virtualenv reaver bats metagoofil openssl feroxbuster cargo
-    apt -y install kali-desktop-gnome gospider cmake crackmapexec realtek-rtl88xxau-dkms arjun dnsgen s3scanner
-    sudo $SUDO_OPT pip3 install --upgrade pip
-    sudo $SUDO_OPT pip3 install osrframework py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot
-    sudo $SUDO_OPT pip install dnspython netaddr
+    apt -y install python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev virtualbox-guest-x11 jq ruby-full libcurl4-openssl-dev ruby virtualbox-guest-utils libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxtools hcxdumptool zlib1g-dev perl chromium zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion bzr mercurial build-essential libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev rename docker.io parsero apache2 amass joomscan uniscan ssh tor privoxy proxychains4 aptitude synaptic lolcat dialog golang-go graphviz virtualenv reaver bats metagoofil openssl feroxbuster cargo gospider cmake crackmapexec realtek-rtl88xxau-dkms arjun dnsgen s3scanner
+    apt -y install kali-desktop-gnome
+    pip3 install --upgrade pip osrframework py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr
     gem install typhoeus opt_parse_validator blunder wpscan
     mkdir -p "$HOME/.local"
     > $HOME/.local/.arno_init_install_successful
@@ -163,7 +166,7 @@ read_package_ini() {
 }
 
 git_install() {
-  local repo=${1%/?(.git)}
+  local repo=${1%%+(.git|/)}
   local app=$2
   local cmd=$3
   if [[ $repo ]]; then
@@ -182,10 +185,10 @@ git_install() {
       ln -sf "$installdir/$app" "${bin%.*}"
     fi
     if [[ -r "$installdir/requirements.txt" ]]; then
-      result=$(cd "$installdir";sudo $SUDO_OPT pip3 install -q -r requirements.txt 2>>$logerr >>$logfile) | progressbar -s fast -m "${repo##*/}: Python requirements"
+      result=$(cd "$installdir";pip3 install -q -r requirements.txt 2>>$logerr >>$logfile) | progressbar -s fast -m "${repo##*/}: Python requirements"
     fi
     if [[ -r "$installdir/setup.py" ]]; then
-      result=$(cd "$installdir";sudo python3 setup.py -q install 2>>$logerr >>$logfile) | progressbar -s fast -m "${repo##*/}: Installing setup.py"
+      result=$(cd "$installdir";python3 setup.py -q install 2>>$logerr >>$logfile) | progressbar -s fast -m "${repo##*/}: Installing setup.py"
     fi
   fi
 }
@@ -193,14 +196,23 @@ git_install() {
 checklist_report() {
   CFGBRed=$'\e[91m'
   CFGBGreen=$'\e[92m'
+  if [[ $check_mode == 1 ]]; then
+    print_message 'Checklist from package.ini'
+    for tool in ${!tools[*]}; do
+      IFS='|' read url script depends post_install <<< "${tools[$tool]}"
+      if [[ $url || $post_install ]]; then
+        [[ "$depends$script" ]] || printf '[%s]\nscript=%s\ndepends=%s\n%s: \e[33mWARNING\e[m: is not possible verify installation: depends is not defined\n\n\n' "$tool" "$script" "$depends" "$tool"
+      fi
+    done
+  fi
   print_message 'Checklist report from tools install'
   for tool in ${selection,,}; do
     tool_list=${!tools[*]}
     if in_array "$tool" ${tool_list,,}; then
       IFS='|' read url script depends post_install <<< "${tools[$tool]}"
-      if [[ $depends ]]; then
+      if [[ $depends || $script ]]; then
         status=$'Fail'
-        if type -t $depends >/dev/null; then
+        if type -t $depends ${script##*/} >/dev/null; then
           status='Ok'
         fi
         echo "${tool^} [$status]"
@@ -237,14 +249,16 @@ while [[ $1 ]]; do
       ;;
     -f|--force-update)
       force_update=1
-      apt -f install
-      rm -f $HOME/.local/.arno_init_install_successful
       shift
       ;;
     -l|--list)
       [[ -f "$inifile" ]] && pkgs=$(grep -oP '(?<=^\[)[^]]+' $inifile)
       echo "  Uso: ./$basename" $pkgs
       exit 0
+      ;;
+    -c|--check)
+      check_mode=1
+      shift
       ;;
     *)
       packages+=($1)
@@ -272,6 +286,8 @@ selection="${packages[*]}"
 if [[ ${#packages[@]} == 0 ]]; then
   selection="${!tools[*]}"
 fi
+
+[[ $check_mode == 1 ]] && { checklist_report; exit; }
 
 init_install
 for tool in ${selection,,}; do
