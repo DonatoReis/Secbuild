@@ -76,13 +76,9 @@ banner() {
                                        ➥ version: '$version''
 
   social="   A Reconaissance Tool's Collection.
-
  https://t.me/PeakyBlindersW
-
      〔Discord Community〕
  https://discord.gg/Z2C2CyVZFU
-
-
 »» Recode The Copyright Is Not Make You A Coder Dude"
   [[ -x /usr/games/lolcat ]] &&
     /usr/games/lolcat <(printf "$logo\n$social\n") ||
@@ -134,14 +130,31 @@ init_install() {
   fi
   # REQUIREMENTS
   print_message 'Complete tool to install and configure various tools for pentesting.'
-  printf "\n${CBold}${CFGWhite}=====================================================>${CReset}\n\n"
+  printf "\n${CBold}${CFGWhite}»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»${CReset}\n\n"
   if [[ ! -f $HOME/.local/.arno_init_install_successful ]]; then
-    apt -y install python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev virtualbox-guest-x11 jq ruby-full libcurl4-openssl-dev ruby virtualbox-guest-utils libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxtools hcxdumptool zlib1g-dev perl chromium zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion bzr mercurial build-essential libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev rename docker.io parsero apache2 amass joomscan uniscan ssh tor privoxy proxychains4 aptitude synaptic lolcat dialog golang-go graphviz virtualenv reaver bats metagoofil openssl feroxbuster cargo gospider cmake crackmapexec realtek-rtl88xxau-dkms arjun dnsgen s3scanner
-    apt -y install kali-desktop-gnome
+    apt -y install python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev virtualbox-guest-x11 jq ruby-full libcurl4-openssl-dev ruby virtualbox-guest-utils libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxdumptool zlib1g-dev perl zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion bzr mercurial build-essential libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev rename docker.io parsero apache2 ssh tor privoxy proxychains4 aptitude synaptic lolcat dialog golang-go graphviz virtualenv reaver bats openssl cargo cmake
+    if [[ $distro != 'Ubuntu' ]]; then
+      apt -y install hcxtools amass joomscan uniscan metagoofil feroxbuster gospider crackmapexec realtek-rtl88xxau-dkms arjun dnsgen s3scanner chromium
+      apt -y install kali-desktop-gnome
+    fi
     pip3 install --upgrade pip osrframework py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr
     gem install typhoeus opt_parse_validator blunder wpscan
     mkdir -p "$HOME/.local"
-    > $HOME/.local/.arno_init_install_successful
+    : > $HOME/.local/.arno_init_install_successful
+  fi
+}
+
+get_distro() {
+  if type -t lsb_release &>/dev/bull; then
+    distro=$(lsb_release -is)
+  elif [[ -f /etc/os-release || \
+          -f /usr/lib/os-release || \
+          -f /etc/openwrt_release || \
+          -f /etc/lsb-release ]]; then
+    for file in /usr/lib/os-release  /etc/{os-,openwrt_,lsb-}release; do
+      source "$file" && break
+    done
+    distro="${NAME:-${DISTRIB_ID}} ${VERSION_ID:-${DISTRIB_RELEASE}}"
   fi
 }
 
@@ -271,16 +284,11 @@ if [[ 0 != $EUID ]]; then
   exit 1
 fi
 
+get_distro
 check_dependencies
 declare -A tools
 check_inifile
 read_package_ini
-
-homedir=$HOME
-if [[ $SUDO_USER ]]; then
-  SUDO_OPT="-H -E -u $SUDO_USER"
-  homedir=$(getent passwd $SUDO_USER|cut -d: -f6)
-fi
 
 selection="${packages[*]}"
 if [[ ${#packages[@]} == 0 ]]; then
