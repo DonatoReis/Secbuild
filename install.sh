@@ -48,7 +48,7 @@ in_array() {
 
 print_message() {
   if [[ $* ]]; then
-    message_fmt="\n\n${CBold}${CFGCyan}[${CFGWhite}+${CFGCyan}] %s${CReset}\n"
+    message_fmt="\n\n${CBold}${CFGYellow}[${CFGWhite}+${CFGYellow}] %s${CReset}\n"
     printf "$message_fmt" "$*"
   fi
 }
@@ -76,12 +76,12 @@ banner() {
                                        ➥ version: '$version''
 
   social="   A Reconaissance Tool's Collection.
-  
- https://t.me/PeakyBlindersW
-     〔Discord Community〕
- https://discord.gg/Z2C2CyVZFU
- 
-»» Recode The Copyright Is Not Make You A Coder Dude"
+
+📥 Discord Community
+   
+ 〔https://discord.gg/Z2C2CyVZFU〕
+
+🛠  Recode The Copyright Is Not Make You A Coder Dude\n"
   [[ -x /usr/games/lolcat ]] &&
     /usr/games/lolcat <(printf "$logo\n$social\n") ||
     { banner_color "$logo"; echo "$social"; }
