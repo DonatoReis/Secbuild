@@ -48,7 +48,7 @@ in_array() {
 
 print_message() {
   if [[ $* ]]; then
-    message_fmt="\n\n${CBold}${CFGYellow}[${CFGWhite}+${CFGYellow}] %s${CReset}\n"
+    message_fmt="\n\n${CBold}${CFGYellow}[${CFGWhite}✓${CFGYellow}] %s${CReset}\n"
     printf "$message_fmt" "$*"
   fi
 }
@@ -65,21 +65,21 @@ banner_color() {
 
 banner() {
   logo='
-   █████████   ███████████   ██████   █████    ███████ ®
-  ███░░░░░███ ░░███░░░░░███ ░░██████ ░░███   ███░░░░░███
- ░███    ░███  ░███    ░███  ░███░███ ░███  ███     ░░███
- ░███████████  ░██████████   ░███░░███░███ ░███      ░███
- ░███░░░░░███  ░███░░░░░███  ░███ ░░██████ ░███      ░███
- ░███    ░███  ░███    ░███  ░███  ░░█████ ░░███     ███
- █████   █████ █████   █████ █████  ░░█████ ░░░███████░
-░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░    ░░░░░    ░░░░░░░
-                                       ➥ version: '$version''
+    █████████   ███████████   ██████   █████    ███████ ®
+   ███░░░░░███ ░░███░░░░░███ ░░██████ ░░███   ███░░░░░███
+  ░███    ░███  ░███    ░███  ░███░███ ░███  ███     ░░███
+  ░███████████  ░██████████   ░███░░███░███ ░███      ░███
+  ░███░░░░░███  ░███░░░░░███  ░███ ░░██████ ░███      ░███
+  ░███    ░███  ░███    ░███  ░███  ░░█████ ░░███     ███
+  █████   █████ █████   █████ █████  ░░█████ ░░░███████░
+ ░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░    ░░░░░    ░░░░░░░
+                                        ➥ version: '$version''
 
   social="   A Reconaissance Tool's Collection.
 
 📥 Discord Community
    
- 〔https://discord.gg/Z2C2CyVZFU〕
+ 〔https://discord.io/thekrakenhacker〕
 
 🛠  Recode The Copyright Is Not Make You A Coder Dude\n"
   [[ -x /usr/games/lolcat ]] &&
@@ -132,7 +132,7 @@ init_install() {
   fi
   # REQUIREMENTS
   print_message 'Complete tool to install and configure various tools for pentesting.'
-  printf "\n${CBold}${CFGWhite}»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»${CReset}\n\n"
+  printf "\n${CBold}${CFGWhite}◖»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»${CReset}\n\n"
   if [[ ! -f $HOME/.local/.arno_init_install_successful ]]; then
     packages='python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev jq ruby-full libcurl4-openssl-dev ruby libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxdumptool zlib1g-dev perl zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion bzr mercurial libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev rename docker.io parsero apache2 ssh tor privoxy proxychains4 aptitude synaptic lolcat dialog golang-go graphviz virtualenv reaver bats openssl cargo cmake'
     case $distro in
