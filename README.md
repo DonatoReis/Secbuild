@@ -21,6 +21,7 @@
 ## An automation tool to install the most popular tools for bug bounty or pentesting! This will save you 90% of your time when setting up your machine to work.
 It already configures all the tools for you to work, you won't need to configure it manually.
 
+
 > Status: Developing ⚠️
 
 
@@ -33,7 +34,7 @@ It already configures all the tools for you to work, you won't need to configure
 ## Operating Systems Supported
 | OS         | Supported | Easy Install  | Tested        | 
 |------------|-----------|---------------|---------------|
-| Ubuntu     |    No     | Yes           | Ubuntu 21.04  |
+| Ubuntu     |    Yes    | Yes           | Ubuntu 21.04  |
 | Kali       |    Yes    | Yes           | Kali 2022.1   |
 | Debian     |    No     | Yes           | Debian 10     |
 | Arch Linux |    No     | No            | Yes           |
@@ -172,8 +173,6 @@ It already configures all the tools for you to work, you won't need to configure
 - [x]  uro
 - [x]  wafw00f
 - [x]  Wfuzz
-- [x]  WPSeku
-- [x]  Wafninja
 - [x]  waybackurls
 - [x]  webscreenshot
 - [x]  Whatweb
