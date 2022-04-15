@@ -33,10 +33,10 @@ It already configures all the tools for you to work, you won't need to configure
 ## Operating Systems Supported
 | OS         | Supported | Easy Install  | Tested        | 
 |------------|-----------|---------------|---------------|
-| Ubuntu     |    No     | Yes           | Ubuntu 20.04  |
-| Kali       |    Yes    | Yes           | Kali 2021.4   |
-| Debian     |    Yes    | Yes           | Debian 10     |
-| Arch Linux |    Yes    | No            | Yes           |
+| Ubuntu     |    No     | Yes           | Ubuntu 21.04  |
+| Kali       |    Yes    | Yes           | Kali 2022.1   |
+| Debian     |    No     | Yes           | Debian 10     |
+| Arch Linux |    No     | No            | Yes           |
 
 <p align="center" dir="auto"><strong>Tools used - You must need to install these tools to use this script</strong><br></p>
 
