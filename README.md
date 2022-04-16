@@ -31,6 +31,8 @@ It already configures all the tools for you to work, you won't need to configure
 
 ### Script to install the most popular tools used when looking for vulnerabilities for a Bug bounty or Pentest bounty program.
 
+[![asciicast](https://asciinema.org/a/ehCiJmzH4xECtkp57pagW3OV2.svg)](https://asciinema.org/a/ehCiJmzH4xECtkp57pagW3OV2)
+
 ## Operating Systems Supported
 | OS         | Supported | Easy Install  | Tested        | 
 |------------|-----------|---------------|---------------|
