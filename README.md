@@ -28,18 +28,43 @@ It already configures all the tools for you to work, you won't need to configure
 ### Tool updates every linux directory and all dependencies needed to work
    - tor, argparse, pyrit, requests, proxychains4, aptitude, Seclists, synaptic, brave, hashcat, docker.io etc...
 
-
 ### Script to install the most popular tools used when looking for vulnerabilities for a Bug bounty or Pentest bounty program.
 
-<a href="https://asciinema.org/a/p1fC2xZHU2oMRshmaFFXQVPtY" target="_blank"><img src="https://asciinema.org/a/p1fC2xZHU2oMRshmaFFXQVPtY.svg" /></a>
-  
+<h3>Usage</h3>
+
+
+```js 
+    █████████   ███████████   ██████   █████    ███████ ®
+   ███░░░░░███ ░░███░░░░░███ ░░██████ ░░███   ███░░░░░███
+  ░███    ░███  ░███    ░███  ░███░███ ░███  ███     ░░███
+  ░███████████  ░██████████   ░███░░███░███ ░███      ░███
+  ░███░░░░░███  ░███░░░░░███  ░███ ░░██████ ░███      ░███
+  ░███    ░███  ░███    ░███  ░███  ░░█████ ░░███     ███
+  █████   █████ █████   █████ █████  ░░█████ ░░░███████░
+ ░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░    ░░░░░    ░░░░░░░
+
+Example Usage:
+./install [-f] [-l] [tool] [-h]
+
+DESCRIPTION
+  Arno is a based script for automatize installation
+
+OPTIONS
+  General options
+    -h,--help,help
+    -l,--list
+    -v,--version
+    -f,--force-update
+
+```
+
 ## Operating Systems Supported
 | OS         | Supported | Easy Install  | Tested        | 
 |------------|-----------|---------------|---------------|
 | Ubuntu     |    Yes    | Yes           | Ubuntu 21.04  |
 | Kali       |    Yes    | Yes           | Kali 2022.1   |
-| Debian     |    No     | Yes           | Debian 10     |
-| Arch Linux |    No     | No            | Yes           |
+| Debian     |    No     | No            | No            |
+| Arch Linux |    No     | No            | No            |
 
 <p align="center" dir="auto"><strong>Tools used - You must need to install these tools to use this script</strong><br></p>
 
