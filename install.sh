@@ -48,7 +48,7 @@ in_array() {
 
 print_message() {
   if [[ $* ]]; then
-    message_fmt="\n\n${CBold}${CFGYellow}[${CFGWhite}✓${CFGYellow}] %s${CReset}\n"
+    message_fmt="\n\n${CBold}${CFGYellow}〔${CFGWhite}✓${CFGYellow}〕%s${CReset}\n"
     printf "$message_fmt" "$*"
   fi
 }
