@@ -28,6 +28,8 @@ It already configures all the tools for you to work, you won't need to configure
 ### Tool updates every linux directory and all dependencies needed to work
    - tor, argparse, pyrit, requests, proxychains4, aptitude, Seclists, synaptic, brave, hashcat, docker.io etc...
 
+![fast](pictures/arno1.gif)
+
 ### Script to install the most popular tools used when looking for vulnerabilities for a Bug bounty or Pentest bounty program.
 
 <h3>Usage</h3>
