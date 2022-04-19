@@ -61,146 +61,20 @@ OPTIONS
 
 <p align="center" dir="auto"><strong>Tools used - You must need to install these tools to use this script</strong><br></p>
 
-
-- [x]  Amass
-- [x]  Anon-SMS
-- [x]  Asnlookup
-- [x]  A2SV
-- [x]  Arjun
-- [x]  aiodnsbrute
-- [x]  anew
-- [x]  Anonsurf
-- [x]  anti-burl
-- [x]  aquatone
-- [x]  assetfinder
-- [x]  Brave
-- [x]  Bluto
-- [x]  Corsy
-- [x]  CrackMapExec
-- [x]  cent
-- [x]  cf-check
-- [x]  chaos-client
-- [x]  cngo
-- [x]  commix
-- [x]  concurl
-- [x]  crlfuzz
-- [x]  crobat
-- [x]  ctfr
-- [x]  DNSCewl
-- [x]  Docker
-- [x]  dalfox
-- [x]  dirdar
-- [x]  Dirsearch
-- [x]  dnscewl
-- [x]  dnsgen
-- [x]  dnsrecon
-- [x]  dnsvalidator
-- [x]  dnsx
-- [x]  Droopescan
-- [x]  ERLPopper
-- [x]  exclude-cdn
-- [x]  feroxbuster
-- [x]  fff
-- [x]  ffuf
-- [x]  ffuz
-- [x]  findomain
-- [x]  Feroxbuster
-- [x]  Gf-Patterns
-- [x]  Go
-- [x]  Gxss
-- [x]  gau
-- [x]  gauplus
-- [x]  getJS
-- [x]  gf
-- [x]  gfpatterns
-- [x]  github-endpoints
-- [x]  github-subdomains
-- [x]  Gittools
-- [x]  Git-dumper
-- [x]  gobuster
-- [x]  google-chrome
-- [x]  gorgo
-- [x]  gospider
-- [x]  gowitness
-- [x]  gron
-- [x]  gxss
-- [x]  hakrawler
-- [x]  http2smugl
-- [x]  httprobe
-- [x]  httpx
-- [x]  Interlace
-- [x]  interactsh-client
-- [x]  Infoga
-- [x]  jaeles
-- [x]  Joomscan
-- [x]  kiterunner
-- [x]  kxss
-- [x]  Knock
-- [x]  LinkFinder
-- [x]  leaky-paths
-- [x]  masscan
-- [x]  massdns
-- [x]  Metagoofil
-- [x]  medusa
-- [x]  meg
-- [x]  naabu
-- [x]  Ngrok
-- [x]  nmap
-- [x]  notify
-- [x]  nuclei
-- [x]  OpenRedireX
-- [x]  Osintgram
-- [x]  ParamSpider
-- [x]  Parsero
-- [x]  phantomjs
-- [x]  Phoneinfoga
-- [x]  Pyrit
-- [x]  proxychains-ng
-- [x]  Pwndb
-- [x]  puredns
-- [x]  qsreplace
-- [x]  RustScan
-- [x]  responder
-- [x]  SecLists
-- [x]  Seeker
-- [x]  s3scanner
-- [x]  scrying
-- [x]  shuffledns
-- [x]  Sslyze
-- [x]  Sslscan
-- [x]  sn0int
-- [x]  soxy
-- [x]  sqlmap
-- [x]  subfinder
-- [x]  sublist3r
-- [x]  Saycheese
-- [x]  Sayhello
-- [x]  Sherlok
-- [x]  subjack
-- [x]  subjs
-- [x]  SocialFish
-- [x]  Takeover
-- [x]  testssl
-- [x]  TheHarvester
-- [x]  Twitter-info
-- [x]  Twintproject
-- [x]  The-endorser
-- [x]  tlscout
-- [x]  ufw
-- [x]  Unfurl
-- [x]  unimap
-- [x]  urldedupe
-- [x]  uro
-- [x]  wafw00f
-- [x]  Wfuzz
-- [x]  waybackurls
-- [x]  webscreenshot
-- [x]  Whatweb
-- [x]  whois
-- [x]  wpscan
-- [x]  Xsstrike
-- [x]  Zphisher
-
+List1|List2|List3|List4|List5|List6|List7|List8|List9
+-----|-----|-----|-----|-----|-----|-----|-----|-----
+<a href="https://github.com/projectdiscovery/subfinder"><code>subfinder</code></a>|<a href="https://github.com/aboul3la/Sublist3r"><code>sublist3r</code></a>|<a href="https://github.com/1ndianl33t/Gf-Patterns"><code>gf patterns</code></a>|<a href="https://github.com/projectdiscovery/dnsx"><code>dnsx</code></a>|<a href="https://github.com/tomnomnom/assetfinder"><code>assetfinder</code></a>|<a href="https://github.com/projectdiscovery/httpx"><code>httpx</code></a>|<a href="https://github.com/Emoe/kxss"><code>kxss</code></a>|<a href="https://github.com/tomnomnom/qsreplace"><code>qsreplace</code></a>|<a href="https://github.com/projectdiscovery/nuclei"><code>nuclei</code></a>|
+<a href="https://github.com/hahwul/dalfox"><code>dalfox</code></a>|<a href="https://github.com/tomnomnom/anew"><code>anew</code></a>|<a href="https://github.com/projectdiscovery/notify"><code>notify</code></a>|<a href="https://github.com/michenriksen/aquatone"><code>aquatone</code></a>|<a href="https://github.com/ameenmaali/urldedupe"><code>urldedupe</code></a>|<a href="https://github.com/OWASP/Amass"><code>amass</code></a>|<a href="https://github.com/bp0lr/gauplus"><code>gauplus</code></a>|<a href="https://github.com/dwisiswant0/crlfuzz"><code>crlfuzz</code></a>|<a href="https://github.com/s0md3v/uro"><code>uro</code></a>|<a href="https://github.com/projectdiscovery/naabu"><code>naabu</code></a>|<a href="https://github.com/Cgboal/SonarSearch"><code>crobat</code></a>|<a href="https://github.com/OJ/gobuster"><code>gobuster</code></a>|<a href="https://github.com/jaeles-project/gospider"><code>gospider</code></a>|<a href="https://github.com/tomnomnom/waybackurls"><code>waybackurls</code></a>|
+<a href="https://github.com/maurosoria/dirsearch"><code>Dirsearch</code></a>|<a href="https://github.com/s0md3v/XSStrike"><code>Xsstrike</code></a>|<a href="https://github.com/guelfoweb/knock"><code>Knock</code></a>|<a href="https://github.com/khalilbijjou/WAFNinja"><code>Wafninja</code></a>|<a href="https://github.com/darryllane/Bluto"><code>Bluto</code></a>|<a href="https://github.com/HACK3RY2J/Anon-SMS"><code>Anon-SMS</code></a>|<a href="https://github.com/NoorQureshi/WPSeku-1"><code>WPSeku</code></a>|<a href="https://github.com/RustScan/RustScan"><code>Rustscan</code></a>|<a href="https://github.com/eth0izzle/the-endorser"><code>The-endorser</code></a>|<a href="https://www.kali.org/tools/whatweb/"><code>Whatweb</code></a>|<a href="https://github.com/sundowndev/phoneinfoga"><code>Phoneinfoga</code></a>|<a href="https://github.com/sqlmapproject/sqlmap"><code>Sqlmap-dev</code></a>|<a href="https://github.com/d093w1z/sayhello"><code>Sayhello</code></a>|<a href="https://github.com/twintproject"><code>Twintproject</code></a>|<a href="https://github.com/wpscanteam/wpscan"><code>Wpscan</code></a>|
+<a href="https://github.com/htr-tech/zphisher"><code>Zphisher</code></a>|<a href="https://github.com/behindthefirewalls/Parsero"><code>Parsero</code></a>|<a href="https://github.com/UndeadSec/SocialFish"><code>SocialFish</code></a>|<a href="https://github.com/Datalux/Osintgram"><code>Osintgram</code></a>|<a href="https://github.com/blechschmidt/massdns"><code>Massdns</code></a>|<a href="https://github.com/arthaud/git-dumper"><code>Git-dumper</code></a>|<a href="https://github.com/yassineaboukir/Asnlookup"><code>Asnlookup</code></a>|<a href="https://github.com/sherlock-project/sherlock"><code>Sherlok</code></a>|<a href="https://github.com/tomnomnom/unfurl"><code>Unfurl</code></a>|
+<a href="https://github.com/hangetzzu/saycheese"><code>Saycheese</code></a>|<a href="https://github.com/tomnomnom/httprobe"><code>Httprobe</code></a>|<a href="https://github.com/inconshreveable/ngrok"><code>Ngrok</code></a>|<a href="https://github.com/xmendez/wfuzz"><code>Wfuzz</code></a>|<a href="https://github.com/laramies/theHarvester"><code>TheHarvester</code></a>|<a href="https://brave-browser-apt-release.s3.brave.com"><code>Brave</code></a>|<a href="https://github.com/devanshbatham/ParamSpider"><code>ParamSpider</code></a>|<a href="https://github.com/lc/gau"><code>Gau</code></a>|<a href="https://github.com/m4ll0k/takeover"><code>Takeover</code></a>|
+<a href="https://github.com/m4ll0k/Infoga"><code>Infoga</code></a>|<a href="https://github.com/Und3rf10w/kali-anonsurf"><code>Anonsurf</code></a>|<a href="https://github.com/internetwache/GitTools"><code>Gittools</code></a>|<a href="https://github.com/droope/droopescan"><code>Droopescan</code></a>|<a href="https://github.com/davidtavarez/pwndb"><code>Pwndb</code></a>|<a href="https://github.com/OWASP/joomscan"><code>Joomscan</code></a>|<a href="https://github.com/nabla-c0d3/sslyze"><code>Sslyze</code></a>|<a href="https://github.com/rbsec/sslscan"><code>Sslscan</code></a>|<a href="https://github.com/hakluke/hakrawler"><code>Hakrawler</code></a>|<a href="https://github.com/hahwul/a2sv"><code>A2SV</code></a>|<a href="https://github.com/D4Vinci/Twitter-Info"><code>Twitter-info</code></a>|
+<a href="https://github.com/ffuf/ffuf"><code>Ffuf</code></a>|<a href="https://github.com/epi052/feroxbuster"><code>Feroxbuster</code></a>|<a href="https://github.com/assetnote/kiterunner"><code>KiteRunner</code></a>|<a href="https://github.com/opsdisk/metagoofil"><code>Metagoofil</code></a>|<a href="https://github.com/thewhiteh4t/seeker"><code>Seeker</code></a>|<a href="https://github.com/hacker3983/pyrit-installerr"><code>Pyrit</code></a>|<a href="https://github.com/maaaaz/webscreenshot"><code>Webscreenshot</code></a>|<a href="https://github.com/Edu4rdSHL/unimap"><code>Unimap</code></a>|<a href="https://github.com/jbq/ufw"><code>Ufw</code></a>|
+<a href="https://github.com/drwetter/testssl.sh"><code>Testssl</code></a>|<a href="https://github.com/lc/subjs"><code>Subjs</code></a>|<a href="https://github.com/haccer/subjack"><code>Subjack</code></a>|<a href="https://github.com/pry0cc/soxy"><code>Soxy</code></a>|<a href="https://github.com/kpcyrd/sn0int"><code>Sn0int</code></a>|<a href="https://github.com/projectdiscovery/shuffledns"><code>Shuffledns</code></a>|<a href="https://github.com/nccgroup/scrying"><code>Scrying</code></a>|<a href="https://github.com/sa7mon/S3Scanner"><code>S3Scanner</code></a>|<a href="https://github.com/d3mondev/puredns"><code>Puredns</code></a>|
+<a href="https://github.com/ariya/phantomjs"><code>phantomjs</code></a>|<a href="https://github.com/devanshbatham/OpenRedireX"><code>OpenRedireX</code></a>|<a href="https://github.com/tomnomnom/meg"><code>meg</code></a>|<a href="https://github.com/medusajs/medusa"><code>medusa</code></a>|<a href="https://github.com/robertdavidgraham/masscan"><code>masscan</code></a>|<a href="https://github.com/ayoubfathi/leaky-paths"><code>leaky-paths</code></a>|<a href="https://github.com/GerbenJavado/LinkFinder"><code>LinkFinder</code></a>|<a href="https://github.com/jaeles-project/jaeles"><code>jaeles</code></a>|<a href="https://github.com/projectdiscovery/interactsh"><code>interactsh</code></a>|
+<a href="https://github.com/codingo/Interlace"><code>Interlace</code></a>|<a href="https://github.com/neex/http2smugl"><code>http2smugl</code></a>|<a href="https://github.com/KathanP19/Gxss"><code>Gxss</code></a>|<a href="https://github.com/tomnomnom/gron"><code>gron</code></a>|<a href="https://github.com/sensepost/gowitness"><code>gowitness</code></a>|<a href="https://github.com/pry0cc/gorgo"><code>gorgo</code></a>|<a href="https://github.com/gwen001/github-subdomains"><code>gitsubdomains</code></a>|<a href="https://github.com/gwen001/github-endpoints"><code>gitendpoints</code></a>|<a href="https://github.com/1ndianl33t/Gf-Patterns"><code>Gf-Patterns</code></a>|
+<a href="https://github.com/003random/getJS"><code>getJS</code></a>|<a href="https://github.com/KathanP19/Gxss"><code>Gxss</code></a>|<a href="https://github.com/Findomain/Findomain"><code>Findomain</code></a>|<a href="https://github.com/dylanaraps/fff"><code>fff</code></a>|<a href="https://github.com/Cgboal/exclude-cdn"><code>exclude-cdn</code></a>|<a href="https://github.com/maikthulhu/ERLPopper"><code>ERLPopper</code></a>|<a href="https://github.com/vortexau/dnsvalidator"><code>dnsvalidator</code></a>|<a href="https://github.com/darkoperator/dnsrecon"><code>dnsrecon</code></a>|<a href="https://github.com/ProjectAnte/dnsgen"><code>dnsgen</code></a>|
+<a href="https://github.com/codingo/DNSCewl"><code>DNSCewl</code></a>|<a href="https://github.com/M4DM0e/DirDar"><code>DirDar</code></a>|<a href="https://github.com/tomnomnom/concurl"><code>concurl</code></a>|<a href="https://github.com/commixproject/commix"><code>commix</code></a>|<a href="https://github.com/yghonem14/cngo"><code>cngo</code></a>|<a href="https://github.com/byt3bl33d3r/CrackMapExec"><code>CrackMapExec</code></a>|<a href="https://github.com/hakluke/haktrails"><code>haktrails</code></a>|<a href="https://github.com/s0md3v/Corsy"><code>Corsy</code></a>|<a href="https://github.com/tomnomnom/burl"><code>burl</code></a>|
 
 ### Full installation
 #### cURL, Recommends installing in root mode
