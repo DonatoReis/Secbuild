@@ -1,7 +1,7 @@
 # Arno
 
 <p align="center" dir="auto">
-  <a target="_blank" rel="noopener noreferrer" href="https://user-images.githubusercontent.com/93531354/155890601-5919d2fe-81be-486e-91d1-d93f8ef734cb.png"><img alt="Arno" src="https://user-images.githubusercontent.com/93531354/155890601-5919d2fe-81be-486e-91d1-d93f8ef734cb.png" height="240" style="max-width: 100%;"></a>
+  <a target="_blank" rel="noopener noreferrer" href="https://imgbb.com/"><img src="https://i.ibb.co/DG2Vbsh/angry-mole-logo-103224-369.png" alt="angry-mole-logo-103224-369" border="0" height="240" style="max-width: 100%;"></a>
   <br>
   <strong>Arno - An automation tool to install the most popular tools for bug bounty or pentesting</strong> 
   <br><br>
