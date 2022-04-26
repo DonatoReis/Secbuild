@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 version=1.0.9
 usage() {
-  usage=' Usage: $basename [OPTIONS]
+  usage="  Usage: $basename [OPTIONS]
 
 DESCRIPTION
   Arno is a based script for automatize installation
@@ -11,7 +11,7 @@ OPTIONS
     -h,--help,help
     -l,--list
     -v,--version
-    -f,--force-update'
+    -f,--force-update"
   printf "$usage\n"
 }
 
@@ -65,15 +65,15 @@ banner_color() {
 
 banner() {
   logo='
-    █████████   ███████████   ██████   █████    ███████ ®
-   ███░░░░░███ ░░███░░░░░███ ░░██████ ░░███   ███░░░░░███
-  ░███    ░███  ░███    ░███  ░███░███ ░███  ███     ░░███
-  ░███████████  ░██████████   ░███░░███░███ ░███      ░███
-  ░███░░░░░███  ░███░░░░░███  ░███ ░░██████ ░███      ░███
-  ░███    ░███  ░███    ░███  ░███  ░░█████ ░░███     ███
-  █████   █████ █████   █████ █████  ░░█████ ░░░███████░
- ░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░    ░░░░░    ░░░░░░░
-                                        ➥ version: '$version''
+   █████████   ███████████   ██████   █████    ███████ ®
+  ███░░░░░███ ░░███░░░░░███ ░░██████ ░░███   ███░░░░░███
+ ░███    ░███  ░███    ░███  ░███░███ ░███  ███     ░░███
+ ░███████████  ░██████████   ░███░░███░███ ░███      ░███
+ ░███░░░░░███  ░███░░░░░███  ░███ ░░██████ ░███      ░███
+ ░███    ░███  ░███    ░███  ░███  ░░█████ ░░███     ███
+ █████   █████ █████   █████ █████  ░░█████ ░░░███████░
+░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░    ░░░░░    ░░░░░░░
+                                       ➥ version: '$version''
 
   social="   A Reconaissance Tool's Collection.
 
@@ -150,7 +150,7 @@ init_install() {
     esac
     apt -y install $packages
     pip3 install --upgrade pip osrframework
-    pip3 install py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr --retries 10
+    pip3 install py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr git-dumper --retries 10
     gem install typhoeus opt_parse_validator blunder wpscan
     mkdir -p "$HOME/.local"
     : > $HOME/.local/.arno_init_install_successful
