@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-version=1.0.9
+version=1.0.16
 usage() {
   usage="  Usage: $basename [OPTIONS]
 
@@ -48,23 +48,18 @@ in_array() {
 
 print_message() {
   if [[ $* ]]; then
-    message_fmt="\n\n${CBold}${CFGYellow}〔${CFGWhite}✓${CFGYellow}〕%s${CReset}\n"
+    message_fmt="\n\n${CBold}${CFGCyan}〔${CFGWhite}✓${CFGCyan}〕%s${CReset}\n"
     printf "$message_fmt" "$*"
   fi
 }
 
-banner_color() {
-  local colors logo_print
-  local c=({30..37})
-  logo_print="$(sed -E 's/$/\\e[m/;s/^.{26}/&\\e[%sm/;s/^.{16}/&\\e[%sm/;s/^.{8}/&\\e[%sm/;s/^/\\e[%sm/' <<< "$logo")"
-  substr=$(for i in {1..4}; do echo -n "${c[$((RANDOM%${#c[@]}))]} "; done)
-  printf -v colors '%6s'
-  colors=(${colors// /$substr})
-  printf "$logo_print\n" "${colors[@]}"
+lolcat() {
+  lolcat=/usr/games/lolcat
+  if type -t $lolcat >/dev/null; then $lolcat; else cat; fi <<< "$1"
 }
 
 banner() {
-  logo='
+  lolcat "
    █████████   ███████████   ██████   █████    ███████ ®
   ███░░░░░███ ░░███░░░░░███ ░░██████ ░░███   ███░░░░░███
  ░███    ░███  ░███    ░███  ░███░███ ░███  ███     ░░███
@@ -73,18 +68,15 @@ banner() {
  ░███    ░███  ░███    ░███  ░███  ░░█████ ░░███     ███
  █████   █████ █████   █████ █████  ░░█████ ░░░███████░
 ░░░░░   ░░░░░ ░░░░░   ░░░░░ ░░░░░    ░░░░░    ░░░░░░░
-                                       ➥ version: '$version''
+                                       ➥ version: $version
 
-  social="   A Reconaissance Tool's Collection.
+            A Reconaissance Tool's Collection.
 
 📥 Discord Community
-   
- 〔https://discord.io/thekrakenhacker〕
 
-🛠  Recode The Copyright Is Not Make You A Coder Dude\n"
-  [[ -x /usr/games/lolcat ]] &&
-    /usr/games/lolcat <(printf "$logo\n$social\n") ||
-    { banner_color "$logo"; echo "$social"; }
+ 〔https://discord.io/thekrakenhacker〕
+🛠  Recode The Copyright Is Not Make You A Coder Dude
+"
 }
 
 system_update() {
@@ -96,15 +88,15 @@ export -f system_update
 
 system_upgrade() {
   print_message 'Updating system'
-  apt -y dist-upgrade
+  apt -y upgrade <<< 'SYSTEM_UPGRADE'
   apt -y autoremove
   apt -y autoclean
 }
 
 check_dependencies() {
-  git_install 'https://github.com/NRZCode/GhostRecon' 'ghostrecon.sh'
+  git_install 'https://github.com/NRZCode/Kraken' 'kraken.sh'
   (
-    srcdir="$srcdir/NRZCode/GhostRecon/vendor"
+    srcdir="$srcdir/NRZCode/Kraken/vendor"
     git_install 'https://github.com/NRZCode/progressbar'
     git_install 'https://github.com/NRZCode/bash-ini-parser'
   )
@@ -115,7 +107,7 @@ check_inifile() {
   if [[ ! -r "$inifile" ]]; then
     [[ -r "$workdir/package-dist.ini" ]] &&
       cp "$workdir"/package{-dist,}.ini ||
-      wget -qO "$workdir/package.ini" https://github.com/NRZCode/GhostRecon/raw/master/package-dist.ini
+      wget -qO "$workdir/package.ini" https://github.com/NRZCode/Kraken/raw/master/package-dist.ini
   fi
   [[ -r "$inifile" ]] || exit 1
 }
@@ -128,32 +120,32 @@ init_install() {
     apt -f install
     apt --fix-broken install -y
     dpkg --configure -a
-    rm -f $HOME/.local/.arno_init_install_successful
+    rm -f $HOME/.local/._first_install.lock
   fi
   # REQUIREMENTS
   print_message 'Complete tool to install and configure various tools for pentesting.'
-  printf "\n${CBold}${CFGWhite}◖»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»${CReset}\n\n"
-  if [[ ! -f $HOME/.local/.arno_init_install_successful ]]; then
-    packages='python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev jq ruby-full libcurl4-openssl-dev ruby libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxdumptool zlib1g-dev perl zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion bzr mercurial libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev rename docker.io parsero apache2 ssh tor privoxy proxychains4 aptitude synaptic lolcat dialog golang-go graphviz virtualenv reaver bats openssl cargo cmake'
+  printf "\n${CBold}${CFGWhite}◖»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»${CReset}\n\n"
+  if [[ ! -f $HOME/.local/._first_install.lock ]]; then
+    packages='python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev jq ruby-full libcurl4-openssl-dev ruby libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxdumptool zlib1g-dev perl zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion bzr mercurial libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev rename docker.io parsero apache2 ssh tor privoxy proxychains4 aptitude synaptic lolcat yad dialog golang-go graphviz virtualenv reaver bats openssl cargo cmake'
+    wget -O /tmp/go1.18.1.linux-amd64.tar.gz https://go.dev/dl/go1.18.1.linux-amd64.tar.gz
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf /tmp/go1.18.1.linux-amd64.tar.gz
+    ln -sf /usr/local/go/bin/go /usr/local/bin/go
     case $distro in
       Ubuntu)
-        wget -O /tmp/go1.18.1.linux-amd64.tar.gz https://go.dev/dl/go1.18.1.linux-amd64.tar.gz
-        rm -rf /usr/local/go
-        tar -C /usr/local -xzf /tmp/go1.18.1.linux-amd64.tar.gz
-        ln -s /usr/local/go/bin/go /usr/local/bin/go
         packages+=' chromium-browser whois'
         ;;
       Kali)
         apt -y install kali-desktop-gnome
-        packages+=' hcxtools amass joomscan uniscan metagoofil gospider crackmapexec arjun dnsgen s3scanner chromium'
+        packages+=' hcxtools amass joomscan uniscan metagoofil gospider crackmapexec arjun dnsgen s3scanner chromium libwacom-common'
         ;;
     esac
     apt -y install $packages
-    pip3 install --upgrade pip osrframework
-    pip3 install py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr git-dumper --retries 10
+    system_upgrade
+    pip3 install --upgrade pip osrframework py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr git-dumper
     gem install typhoeus opt_parse_validator blunder wpscan
     mkdir -p "$HOME/.local"
-    : > $HOME/.local/.arno_init_install_successful
+    > $HOME/.local/._first_install.lock
   fi
 }
 
@@ -254,7 +246,7 @@ basename=${0##*/}
 export srcdir=${srcdir:-/usr/local}
 export bindir=${bindir:-$srcdir/bin}
 export GOBIN=$bindir GOPATH=$bindir
-workdir="$srcdir/NRZCode/GhostRecon"
+workdir="$srcdir/NRZCode/Kraken"
 logfile="$workdir/${basename%.*}.log"
 logerr="$workdir/${basename%.*}.err"
 inifile="$workdir/package.ini"
@@ -325,5 +317,4 @@ for tool in ${selection,,}; do
     fi
   fi
 done
-system_upgrade
 checklist_report
