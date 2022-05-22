@@ -144,6 +144,7 @@ init_install() {
     system_upgrade
     pip3 install --upgrade pip osrframework py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr git-dumper
     gem install typhoeus opt_parse_validator blunder wpscan
+    cargo install ppfuzz
     mkdir -p "$HOME/.local"
     > $HOME/.local/._first_install.lock
   fi
