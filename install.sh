@@ -94,7 +94,7 @@ system_upgrade() {
 }
 
 check_dependencies() {
-  git_install 'https://github.com/NRZCode/Kraken' 'kraken.sh'
+  git_install 'https://github.com/DonatoReis/Kraken' 'kraken.sh'
   (
     srcdir="$srcdir/NRZCode/Kraken/vendor"
     git_install 'https://github.com/NRZCode/progressbar'
@@ -107,7 +107,7 @@ check_inifile() {
   if [[ ! -r "$inifile" ]]; then
     [[ -r "$workdir/package-dist.ini" ]] &&
       cp "$workdir"/package{-dist,}.ini ||
-      wget -qO "$workdir/package.ini" https://github.com/NRZCode/Kraken/raw/master/package-dist.ini
+      wget -qO "$workdir/package.ini" https://github.com/DonatoReis/Kraken/raw/master/package-dist.ini
   fi
   [[ -r "$inifile" ]] || exit 1
 }
@@ -127,9 +127,9 @@ init_install() {
   printf "\n${CBold}${CFGWhite}◖»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»${CReset}\n\n"
   if [[ ! -f $HOME/.local/._first_install.lock ]]; then
     packages='python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev jq ruby-full libcurl4-openssl-dev ruby libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxdumptool zlib1g-dev perl zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion bzr mercurial libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev rename docker.io parsero apache2 ssh tor privoxy proxychains4 aptitude synaptic lolcat yad dialog golang-go graphviz virtualenv reaver bats openssl cargo cmake'
-    wget -O /tmp/go1.18.1.linux-amd64.tar.gz https://go.dev/dl/go1.18.1.linux-amd64.tar.gz
+    wget -O /tmp/go1.18.3.linux-amd64.tar.gz https://go.dev/dl/go1.18.3.linux-amd64.tar.gz
     rm -rf /usr/local/go
-    tar -C /usr/local -xzf /tmp/go1.18.1.linux-amd64.tar.gz
+    tar -C /usr/local -xzf /tmp/go1.18.3.linux-amd64.tar.gz
     ln -sf /usr/local/go/bin/go /usr/local/bin/go
     case $distro in
       Ubuntu)
