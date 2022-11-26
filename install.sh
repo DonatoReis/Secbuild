@@ -137,7 +137,7 @@ init_install() {
         ;;
       Kali)
         apt -y install kali-desktop-gnome
-        packages+=' hcxtools amass joomscan uniscan metagoofil gospider crackmapexec arjun dnsgen s3scanner chromium libwacom-common'
+        packages+=' hcxtools amass joomscan uniscan metagoofil gospider zmap crackmapexec arjun dnsgen s3scanner chromium libwacom-common'
         ;;
     esac
     apt -y install $packages
