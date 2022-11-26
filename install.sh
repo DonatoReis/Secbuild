@@ -127,9 +127,9 @@ init_install() {
   printf "\n${CBold}${CFGWhite}◖»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»${CReset}\n\n"
   if [[ ! -f $HOME/.local/._first_install.lock ]]; then
     packages='python3-pip apt-transport-https curl libcurl4-openssl-dev libssl-dev jq ruby-full libcurl4-openssl-dev ruby libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxdumptool zlib1g-dev perl zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion bzr mercurial libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl python-setuptools libldns-dev rename docker.io parsero apache2 ssh tor privoxy proxychains4 aptitude synaptic lolcat yad dialog golang-go graphviz virtualenv reaver bats openssl cargo cmake'
-    wget -O /tmp/go1.18.3.linux-amd64.tar.gz https://go.dev/dl/go1.19.linux-amd64.tar.gz
+    wget -O /tmp/go1.19.2.linux-amd64.tar.gz https://go.dev/dl/go1.19.2.linux-amd64.tar.gz
     rm -rf /usr/local/go
-    tar -C /usr/local -xzf /tmp/go1.18.3.linux-amd64.tar.gz
+    tar -C /usr/local -xzf /tmp/go1.19.2.linux-amd64.tar.gz
     ln -sf /usr/local/go/bin/go /usr/local/bin/go
     case $distro in
       Ubuntu)
@@ -142,7 +142,7 @@ init_install() {
     esac
     apt -y install $packages
     system_upgrade
-    pip3 install --upgrade pip osrframework py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr git-dumper
+    pip3 install --upgrade pip osrframework py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun maigret dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr git-dumper
     gem install typhoeus opt_parse_validator blunder wpscan
     cargo install ppfuzz
     mkdir -p "$HOME/.local"
