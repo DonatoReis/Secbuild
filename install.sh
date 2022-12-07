@@ -142,7 +142,7 @@ init_install() {
     esac
     apt -y install $packages
     system_upgrade
-    pip3 install --upgrade pip osrframework py-altdns==1.0.2 requests wfuzz holehe twint droopescan uro arjun maigret dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr git-dumper
+    pip3 install --upgrade pip osrframework py-altdns==1.0.2 requests maigret wfuzz holehe twint droopescan uro arjun maigret dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr git-dumper
     gem install typhoeus opt_parse_validator blunder wpscan
     cargo install ppfuzz
     mkdir -p "$HOME/.local"
