@@ -98,5 +98,39 @@ git clone https://github.com/DonatoReis/arno
 sudo arno/install.sh
 ```
 
+#### **Tools Recon DNS**
+```sh
+Dnsx:         | https://github.com/projectdiscovery/dnsx
+Massdns:      | https://github.com/blechschmidt/massdns
+Shuffledns:   | https://github.com/projectdiscovery/shuffledns
+Dnspython:    | https://github.com/rthalley/dnspython
+Aiodnsbrute:  | https://github.com/blark/aiodnsbrute
+Puredns:      | https://github.com/d3mondev/puredns
+Dnsvalidator: | https://github.com/vortexau/dnsvalidator
+DnsRecon:     | https://github.com/darkoperator/dnsrecon
+Dnsgen:       | https://github.com/ProjectAnte/dnsgen
+DNSCewl:      | https://github.com/codingo/DNSCewl
+```
+
+#### **Tools Recon Domains**
+```sh
+Amass:             | https://github.com/OWASP/Amass
+Subfinder:         | https://github.com/projectdiscovery/subfinder
+Sublist3r:         | https://github.com/aboul3la/Sublist3r
+Findomain:         | https://github.com/Findomain/Findomain
+Github-subdomains: | https://github.com/gwen001/github-subdomains
+Sonarsearch:       | https://github.com/cgboal/sonarsearch/
+Feroxbuster:       | https://github.com/epi052/feroxbuster
+Pyosint:           | https://github.com/d8rkmind/Pyosint
+```
+
+#### **Tools Recon Urls**
+```sh
+Katana:      | https://github.com/projectdiscovery/katana
+Gau:         | https://github.com/lc/gau
+Gauplus:     | https://github.com/bp0lr/gauplus
+WaybackUrls: | https://github.com/tomnomnom/waybackurls
+```
+
 
 Warning: This code was originally created for personal use, it generates a substantial amount of traffic, please use with caution.
