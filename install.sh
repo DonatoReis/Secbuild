@@ -95,7 +95,7 @@ system_upgrade() {
 
 check_dependencies() {
   (
-    srcdir="$srcdir/DonatoReis/Arno/vendor"
+    srcdir="$srcdir/DonatoReis/arno/vendor"
     git_install 'https://github.com/NRZCode/progressbar'
     git_install 'https://github.com/NRZCode/bash-ini-parser'
   )
@@ -106,7 +106,7 @@ check_inifile() {
   if [[ ! -r "$inifile" ]]; then
     [[ -r "$workdir/package-dist.ini" ]] &&
       cp "$workdir"/package{-dist,}.ini ||
-      wget -qO "$workdir/package.ini" https://github.com/DonatoReis/Arno/raw/master/package-dist.ini
+      wget -qO "$workdir/package.ini" https://github.com/DonatoReis/arno/raw/master/package-dist.ini
   fi
   [[ -r "$inifile" ]] || exit 1
 }
@@ -247,7 +247,7 @@ basename=${0##*/}
 export srcdir=${srcdir:-/usr/local}
 export bindir=${bindir:-$srcdir/bin}
 export GOBIN=$bindir GOPATH=$bindir
-workdir="$srcdir/DonatoReis/Arno"
+workdir="$srcdir/DonatoReis/arno"
 logfile="$workdir/${basename%.*}.log"
 logerr="$workdir/${basename%.*}.err"
 inifile="$workdir/package.ini"
