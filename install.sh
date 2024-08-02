@@ -32,7 +32,7 @@ fi
 # Folder and file path
 dir_path="$HOME/.themes/CustomTheme/gtk-3.0"
 file_path="$dir_path/gtk.css"
-file_url="https://raw.githubusercontent.com/DonatoReis/arno/master/gtk.css"
+file_url="https://raw.githubusercontent.com/DonatoReis/Secbuild/master/gtk.css"
 
 # Check if folder exists
 if [ ! -d "$dir_path" ]; then
