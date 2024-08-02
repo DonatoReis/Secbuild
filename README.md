@@ -1,9 +1,9 @@
-# Arno
+# Secbuild
 
 <p align="center" dir="auto">
-  <a target="_blank" rel="noopener noreferrer" href="https://imgbb.com/"><img src="https://i.ibb.co/G5SgQ0T/68747470733a2f2f692e6962622e636f2f444732566273682f616e6772792d6d6f6c652d6c6f676f2d3130333232342d3336.png" alt="angry-mole-logo-103224-369" border="0" height="240" style="max-width: 100%;"></a>
+  <a target="_blank" rel="noopener noreferrer" href="https://imgbb.com/"><img src="https://i.ibb.co/TmM7ZVx/secbuild-transformed.png" alt="secbuild-transformed" border="0" height="540" style="max-width: 100%;"></a>
   <br>
-  <strong>Arno - An automation tool to install the most popular tools for bug bounty or pentesting</strong> 
+  <strong>Secbuild - An automation tool to install the most popular tools for bug bounty or pentesting</strong> 
   <br><br>
   <strong>Recode The Copyright Is Not Make You A Coder</strong>
 </p>  
@@ -28,8 +28,6 @@ It already configures all the tools for you to work, you won't need to configure
 ### Tool updates every linux directory and all dependencies needed to work
    - tor, argparse, pyrit, requests, proxychains4, aptitude, Seclists, synaptic, brave, hashcat, docker.io etc...
 
-![fast](pictures/arno1.gif)
-
 ### Script to install the most popular tools used when looking for vulnerabilities for a Bug bounty or Pentest bounty program.
 
 <h3>Usage</h3>
@@ -37,25 +35,32 @@ It already configures all the tools for you to work, you won't need to configure
 
 ```js 
 Example Usage:
-./install [-f] [-l] [tool] [-h]
+secbuild [-f] [-l] [tool] [-h]
 
 DESCRIPTION
-  Arno is a based script for automatize installation
+  Secbuild is a based script for automatize installation
 
 OPTIONS
   General options
-    -h,--help,help
+    -h,--help
     -l,--list
     -v,--version
     -f,--force-update
+
+Mode display:
+    secbuild
+
+Examples:
+    secbuild.sh -f
+    secbuild.sh amass
 
 ```
 
 ## Operating Systems Supported
 | OS         | Supported | Easy Install  | Tested        | 
 |------------|-----------|---------------|---------------|
-| Ubuntu     |    Yes    | Yes           | Ubuntu 21.04  |
-| Kali       |    Yes    | Yes           | Kali 2022.1   |
+| Ubuntu     |    Yes    | Yes           | Ubuntu 22.04  |
+| Kali       |    Yes    | Yes           | Kali 2024.1   |
 | Debian     |    No     | No            | No            |
 | Arch Linux |    No     | No            | No            |
 
@@ -87,15 +92,21 @@ List1|List2|List3|List4|List5|List6|List7|List8
 ### Full installation
 #### cURL, Recommends installing in root mode
 
+### Display mode
 ```sh
-curl -sL https://github.com/DonatoReis/arno/raw/main/install.sh | sudo bash
+secbuild
+```
+
+### Mode terminal
+```sh
+curl -sL https://github.com/DonatoReis/Secbuild/raw/main/secbuild.sh | sudo bash
 
 ```
 
 #### **Installation mode with git clone**
 ```sh
-git clone https://github.com/DonatoReis/arno
-sudo arno/install.sh
+git clone https://github.com/DonatoReis/Secbuild
+sudo Secbuild/secbuild.sh
 ```
 
 #### **Tools Recon DNS**
