@@ -4,7 +4,6 @@
 # =======================
 # This script is used to install security tools.
 # To use it, run the script with the -h option to get help.
-#tools_and_packages=$(read_package_ini2 "$workdir/package.ini")
 
 # Current script path
 script_path="$(realpath "$0")"
