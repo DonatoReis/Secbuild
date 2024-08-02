@@ -115,9 +115,12 @@ OPTIONS
     -v,--version
     -f,--force-update
 
+Mode display:
+    secbuild
+
 Examples:
     secbuild.sh -f
-    secbuild.sh amass 
+    secbuild.sh amass
 "
   printf '%s\n' "$usage"
 }
