@@ -51,7 +51,7 @@ else
 fi
 
 echo "configuring folders."
-
+apt -y install yad >/dev/null 2>&1
 # ANSI Colors
 load_ansi_colors() {
   # @C FG Color
