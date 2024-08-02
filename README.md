@@ -92,7 +92,7 @@ List1|List2|List3|List4|List5|List6|List7|List8
 ### Full installation
 #### cURL, Recommends installing in root mode
 
-### Mode display
+### Display mode
 ```sh
 secbuild
 ```
