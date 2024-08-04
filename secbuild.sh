@@ -52,6 +52,56 @@ fi
 
 echo "configuring folders."
 apt -y install yad >/dev/null 2>&1
+
+
+log_level="INFO"
+
+case $log_level in
+"DEBUG")
+  log_level=0
+  ;;
+"INFO")
+  log_level=1
+  ;;
+"WARNING")
+  log_level=2
+  ;;
+"ERROR")
+  log_level=3
+  ;;
+"CRITICAL")
+  log_level=4
+  ;;
+esac
+
+# Error management system
+function handle_error() {
+  local error="$1"
+  echo "Erro: $error" >&2
+  exit 1
+}
+
+# Caching system
+function cache_result() {
+  local command="$1"
+  local cache_file="$2"
+  if [ -f "$cache_file" ]; then
+    result=$(cat "$cache_file")
+  else
+    local result
+    result="$($command)"
+    echo "$result" >"$cache_file"
+    echo "$result"
+  fi
+}
+
+debug() {
+  if [ -x "$APP_DEBUG" ] && $APP_DEBUG ||
+    [[ ${APP_DEBUG,,} == @(true|1|on) ]]; then
+    echo -e "<!--\n [+] $(cat -A <<<"$*")\n-->"
+  fi
+}
+
 # ANSI Colors
 load_ansi_colors() {
   # @C FG Color
@@ -324,54 +374,6 @@ show_result() {
     n | N) exit 0 ;;
     *) echo -e "\n\033[1;31mInvalid option. Please choose a valid option.\033[0m" ;;
   esac
-}
-
-log_level="INFO"
-
-case $log_level in
-"DEBUG")
-  log_level=0
-  ;;
-"INFO")
-  log_level=1
-  ;;
-"WARNING")
-  log_level=2
-  ;;
-"ERROR")
-  log_level=3
-  ;;
-"CRITICAL")
-  log_level=4
-  ;;
-esac
-
-# Error management system
-function handle_error() {
-  local error="$1"
-  echo "Erro: $error" >&2
-  exit 1
-}
-
-# Caching system
-function cache_result() {
-  local command="$1"
-  local cache_file="$2"
-  if [ -f "$cache_file" ]; then
-    result=$(cat "$cache_file")
-  else
-    local result
-    result="$($command)"
-    echo "$result" >"$cache_file"
-    echo "$result"
-  fi
-}
-
-debug() {
-  if [ -x "$APP_DEBUG" ] && $APP_DEBUG ||
-    [[ ${APP_DEBUG,,} == @(true|1|on) ]]; then
-    echo -e "<!--\n [+] $(cat -A <<<"$*")\n-->"
-  fi
 }
 
 in_array() {
