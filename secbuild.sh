@@ -116,20 +116,23 @@ trap trap_handler INT TERM
 # ==============================================================================
 
 log() {
-    local level="$1"
-    shift
+    local level="$1"; shift
     local message="$*"
-    local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-    
+    local timestamp
+    timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
+
+    # Garante que os caminhos existem antes de gravar
+    mkdir -p "$LOG_DIR" 2>/dev/null || true
+    : > "$LOG_FILE" 2>/dev/null || true
+    : > "$ERROR_LOG" 2>/dev/null || true
+
     # Log para arquivo
     echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
-    
+
     # Log de erros específico
-    if [[ "$level" == "ERROR" ]]; then
-        echo "[$timestamp] $message" >> "$ERROR_LOG"
-    fi
-    
-    # Output para terminal se não estiver em modo silencioso
+    [[ "$level" == "ERROR" ]] && echo "[$timestamp] $message" >> "$ERROR_LOG"
+
+    # Output no terminal (se não silencioso)
     if [[ $SILENT_MODE -eq 0 ]]; then
         case "$level" in
             ERROR)   echo -e "${RED}[✗]${RESET} $message" >&2 ;;
@@ -1265,15 +1268,15 @@ exit_script() {
 main() {
     # Configurar cores
     setup_colors
+
+    # Criar diretórios e configurar PATH
+    create_directories
     
     # Verificar root
     check_root
     
     # Detectar sistema (apenas Kali/Ubuntu)
     detect_system
-    
-    # Criar diretórios e configurar PATH
-    create_directories
     
     # Carregar configurações se existirem
     load_config
