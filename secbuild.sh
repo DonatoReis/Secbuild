@@ -1,671 +1,1431 @@
 #!/usr/bin/env bash
 
-# Script documentation
-# =======================
-# This script is used to install security tools.
-# To use it, run the script with the -h option to get help.
+################################################################################
+# SecBuild v3.0 - Security Tools Automated Installer
+# Author: SecBuild Team (Production Version)
+# Description: Ferramenta robusta e otimizada para instalação automatizada
+#              de ferramentas de segurança em Kali Linux e Ubuntu
+# Compatibility: Kali Linux, Ubuntu 20.04+
+################################################################################
 
-# Current script path
-script_path="$(realpath "$0")"
-script_name="secbuild"
+set -euo pipefail  # Modo seguro: falha em erros, variáveis não definidas e pipes
+IFS=$'\n\t'        # Separador de campo seguro
 
-# Check if the script is already in the PATH
-if command -v "$script_name" >/dev/null 2>&1; then
-  echo "$script_name is already in PATH." >/dev/null 2>&1
-else
-  # Make the script executable
-  chmod +x "$script_path"
+# ==============================================================================
+# CONFIGURAÇÕES GLOBAIS
+# ==============================================================================
 
-  # Move the script to /usr/local/bin and rename it
-  sudo cp "$script_path" "/usr/local/bin/$script_name"
-  sudo chmod +x "/usr/local/bin/$script_name"
+readonly SCRIPT_VERSION="3.0.0"
+readonly SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-  # Verify that the operation was successful
-  if command -v "$script_name" >/dev/null 2>&1; then
-    echo "$script_name has been moved to /usr/local/bin and is available in the PATH." >/dev/null 2>&1
-  else
-    echo "Error moving $script_name for /usr/local/bin." >/dev/null 2>&1
-  fi
-fi
+# Diretórios de trabalho
+readonly WORK_DIR="${WORK_DIR:-$HOME/.secbuild}"
+readonly SRC_DIR="${SRC_DIR:-/usr/local/src/secbuild}"
+readonly BIN_DIR="${BIN_DIR:-/usr/local/bin}"
+readonly LOG_DIR="${WORK_DIR}/logs"
+readonly CACHE_DIR="${WORK_DIR}/cache"
+readonly VENDOR_DIR="${WORK_DIR}/vendor"
+readonly CONFIG_DIR="${WORK_DIR}/config"
+readonly BACKUP_DIR="${WORK_DIR}/backups"
 
-# Folder and file path
-dir_path="$HOME/.themes/CustomTheme/gtk-3.0"
-file_path="$dir_path/gtk.css"
-file_url="https://raw.githubusercontent.com/DonatoReis/Secbuild/master/gtk.css"
+# Arquivos de configuração e logs
+readonly CONFIG_FILE="${CONFIG_DIR}/secbuild.conf"
+readonly LOG_FILE="${LOG_DIR}/secbuild_$(date +%Y%m%d_%H%M%S).log"
+readonly ERROR_LOG="${LOG_DIR}/secbuild_errors_$(date +%Y%m%d_%H%M%S).log"
+readonly DEPS_LOCK="${WORK_DIR}/.deps.lock"
 
-# Check if folder exists
-if [ ! -d "$dir_path" ]; then
-  mkdir -p "$dir_path" >/dev/null 2>&1
-else
-  echo "Folder $dir_path already exists." >/dev/null 2>&1
-fi
+# URLs de recursos
+readonly PACKAGE_INI_URL="https://raw.githubusercontent.com/DonatoReis/Secbuild/master/package-dist.ini"
+readonly PROGRESSBAR_URL="https://github.com/NRZCode/progressbar"
+readonly INI_PARSER_URL="https://github.com/NRZCode/bash-ini-parser"
 
-echo "update secbuild."
-sleep 1
+# Configurações de sistema
+readonly DOWNLOAD_TIMEOUT=300
+readonly RETRY_COUNT=3
+readonly RETRY_DELAY=5
 
-# Check if the file already exists
-if [ -f "$file_path" ]; then
-  echo "File $file_path already exists." >/dev/null 2>&1
-else
-  wget -O "$file_path" "$file_url" >/dev/null 2>&1
-fi
+# Flags globais
+FORCE_UPDATE=0
+VERBOSE_MODE=0
+SILENT_MODE=0
+INTERACTIVE_MODE=1
+DISTRO=""
+PKG_MANAGER=""
 
-echo "configuring folders."
-apt -y install yad >/dev/null 2>&1
+# Arrays para ferramentas
+declare -A TOOLS_REGISTRY
+declare -A TOOLS_STATUS
+declare -a FAILED_TOOLS
+declare -a INSTALLED_TOOLS
+declare -a SKIPPED_TOOLS
 
+# ==============================================================================
+# CORES E FORMATAÇÃO
+# ==============================================================================
 
-log_level="INFO"
-
-case $log_level in
-"DEBUG")
-  log_level=0
-  ;;
-"INFO")
-  log_level=1
-  ;;
-"WARNING")
-  log_level=2
-  ;;
-"ERROR")
-  log_level=3
-  ;;
-"CRITICAL")
-  log_level=4
-  ;;
-esac
-
-# Error management system
-function handle_error() {
-  local error="$1"
-  echo "Erro: $error" >&2
-  exit 1
+setup_colors() {
+    if [[ -t 1 ]] && command -v tput &>/dev/null; then
+        BOLD="$(tput bold)"
+        RESET="$(tput sgr0)"
+        RED="$(tput setaf 1)"
+        GREEN="$(tput setaf 2)"
+        YELLOW="$(tput setaf 3)"
+        BLUE="$(tput setaf 4)"
+        MAGENTA="$(tput setaf 5)"
+        CYAN="$(tput setaf 6)"
+        WHITE="$(tput setaf 7)"
+    else
+        BOLD=""
+        RESET=""
+        RED=""
+        GREEN=""
+        YELLOW=""
+        BLUE=""
+        MAGENTA=""
+        CYAN=""
+        WHITE=""
+    fi
 }
 
-# Caching system
-function cache_result() {
-  local command="$1"
-  local cache_file="$2"
-  if [ -f "$cache_file" ]; then
-    result=$(cat "$cache_file")
-  else
-    local result
-    result="$($command)"
-    echo "$result" >"$cache_file"
-    echo "$result"
-  fi
+# ==============================================================================
+# TRATAMENTO DE ERROS AVANÇADO
+# ==============================================================================
+
+on_error() {
+    local line="$1"
+    local code="$2"
+    local cmd="${3:-}"
+    error "Erro na linha $line (código: $code)"
+    [[ -n "$cmd" ]] && error "Comando: $cmd"
+    error "Verifique o log em: $LOG_FILE"
 }
 
-debug() {
-  if [ -x "$APP_DEBUG" ] && $APP_DEBUG ||
-    [[ ${APP_DEBUG,,} == @(true|1|on) ]]; then
-    echo -e "<!--\n [+] $(cat -A <<<"$*")\n-->"
-  fi
+trap 'on_error ${LINENO} $? "${BASH_COMMAND}"' ERR
+
+trap_handler() {
+    echo
+    warning "Interrompido pelo usuário!"
+    exit_script
 }
 
-# ANSI Colors
-load_ansi_colors() {
-  # @C FG Color
-  #    |-- foreground color
-  export CReset=$'\e[m' CFGBlack='\e[30m' CFGRed='\e[31m' CFGGreen='\e[32m' \
-    CFGYellow='\e[33m' CFGBlue='\e[34m' CFGPurple='\e[35m' CFGCyan='\e[36m' \
-    CFGWhite='\e[37m'
-  # @C BG Color
-  #    |-- background color
-  export CBGBlack='\e[40m' CBGRed='\e[41m' CBGGreen='\e[42m' CBGYellow='\e[43m' \
-    CBGBlue='\e[44m' CBGPurple='\e[45m' CBGCyan='\e[46m' CBGWhite='\e[47m'
-  # @C Attribute
-  #    |-- text attribute
-  export CBold='\e[1m' CFaint='\e[2m' CItalic='\e[3m' CUnderline='\e[4m' \
-    CSBlink='\e[5m' CFBlink='\e[6m' CReverse='\e[7m' CConceal='\e[8m' \
-    CCrossed='\e[9m' CDoubleUnderline='\e[21m'
+trap trap_handler INT TERM
 
-  export CFGPurple=$(tput setaf 5)
-  export CFGBlue=$(tput setaf 4)
+# ==============================================================================
+# FUNÇÕES DE LOGGING E OUTPUT
+# ==============================================================================
+
+log() {
+    local level="$1"
+    shift
+    local message="$*"
+    local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
+    
+    # Log para arquivo
+    echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
+    
+    # Log de erros específico
+    if [[ "$level" == "ERROR" ]]; then
+        echo "[$timestamp] $message" >> "$ERROR_LOG"
+    fi
+    
+    # Output para terminal se não estiver em modo silencioso
+    if [[ $SILENT_MODE -eq 0 ]]; then
+        case "$level" in
+            ERROR)   echo -e "${RED}[✗]${RESET} $message" >&2 ;;
+            SUCCESS) echo -e "${GREEN}[✓]${RESET} $message" ;;
+            WARNING) echo -e "${YELLOW}[!]${RESET} $message" ;;
+            INFO)    echo -e "${BLUE}[i]${RESET} $message" ;;
+            DEBUG)   [[ $VERBOSE_MODE -eq 1 ]] && echo -e "${CYAN}[D]${RESET} $message" ;;
+            *)       echo "$message" ;;
+        esac
+    fi
 }
 
-print_message() {
-  if [[ $* ]]; then
-    message_fmt="\n\n${CBold}${CFGCyan}〔${CFGWhite}✓${CFGCyan}〕%s${CReset}\n"
-    printf "$message_fmt" "$*"
-  fi
+error() { log "ERROR" "$@"; }
+success() { log "SUCCESS" "$@"; }
+warning() { log "WARNING" "$@"; }
+info() { log "INFO" "$@"; }
+debug() { log "DEBUG" "$@"; }
+
+print_banner() {
+    cat << 'EOF'
+
+███████╗███████╗ ██████╗██████╗ ██╗   ██╗██╗██╗     ██████╗     ██╗   ██╗██████╗ 
+██╔════╝██╔════╝██╔════╝██╔══██╗██║   ██║██║██║     ██╔══██╗    ██║   ██║╚════██╗
+███████╗█████╗  ██║     ██████╔╝██║   ██║██║██║     ██║  ██║    ██║   ██║ ██████╔╝
+╚════██║██╔══╝  ██║     ██╔══██╗██║   ██║██║██║     ██║  ██║    ╚██╗ ██╔╝ ╚════██╗
+███████║███████╗╚██████╗██████╔╝╚██████╔╝██║███████╗██████╔╝     ╚████╔╝ ██████╔╝
+╚══════╝╚══════╝ ╚═════╝╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═════╝       ╚═══╝  ╚═════╝ 
+
+EOF
+    echo -e "${CYAN}Advanced Security Tools Installer - Version $SCRIPT_VERSION${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
 }
 
-lolcat() {
-  lolcat=/usr/games/lolcat
-  if type -t $lolcat >/dev/null; then $lolcat; else cat; fi <<<"$1"
+# Barra de progresso corrigida
+show_progress() {
+    local current="$1"
+    local total="$2"
+    local task="${3:-}"
+    
+    # Previne divisão por zero
+    (( total == 0 )) && total=1
+    
+    local percent=$(( current * 100 / total ))
+    (( percent > 100 )) && percent=100
+    
+    local filled=$(( percent / 2 ))
+    local empty=$(( 50 - filled ))
+    
+    local bar_fill bar_empty
+    printf -v bar_fill  '%*s' "$filled" ''
+    printf -v bar_empty '%*s' "$empty"  ''
+    
+    bar_fill=${bar_fill// /█}
+    bar_empty=${bar_empty// /░}
+    
+    printf "\r${CYAN}[%3d%%]${RESET} [${GREEN}%s${RESET}%s] %s" \
+           "$percent" "$bar_fill" "$bar_empty" "$task"
 }
 
-banner() {
-  lolcat "
-${CFGBlue}███████╗███████╗ ██████╗██████╗ ██╗   ██╗██╗██╗     ██████╗ 
-${CFGBlue}██╔════╝██╔════╝██╔════╝██╔══██╗██║   ██║██║██║     ██╔══██╗
-${CFGBlue}███████╗█████╗  ██║     ██████╔╝██║   ██║██║██║     ██║  ██║
-${CFGBlue}╚════██║██╔══╝  ██║     ██╔══██╗██║   ██║██║██║     ██║  ██║
-${CFGBlue}███████║███████╗╚██████╗██████╔╝╚██████╔╝██║███████╗██████╔╝
-${CFGBlue}╚══════╝╚══════╝ ╚═════╝╚═════╝  ╚═════╝ ╚═╝╚══════╝╚═════╝${CReset}
-                                         ➥ version: $version
-
-            ${CFGBlue}A Reconaissance Tool's Collection.${CReset}
-
-📥 Discord Community - https://discord.io/thekrakenhacker
-
-🛠  ${CFGBlue}Recode The Copyright Is Not Make You A Coder Dude${CFGPurple}
-"
-}
-
-version=1.0.17a
-usage() {
-  usage="  Usage: $basename [-f] [-l] [tool] [-h] [OPTIONS]
-
-OPTIONS
-  General options
-    -h,--help
-    -l,--list
-    -v,--version
-    -f,--force-update
-
-Mode display:
-    secbuild
-
-Examples:
-    secbuild.sh -f
-    secbuild.sh amass
-"
-  printf '%s\n' "$usage"
-}
-
-# Define the function to display the user interface
-show_menu() {
-  clear
-  banner
-  echo -e "\033[1;34mSecBuild - is a based script for automatize installation\033[0m"
-  echo -e "--------------------------------------------------------"
-  echo -e "\033[1;32m1. install   All Tools\033[0m"
-  echo -e "\033[1;32m2. install   Select Tools\033[0m"
-  echo -e "\033[1;32m3. check     Dependencies\033[0m"
-  echo -e "\033[1;32m4. update    Update force\033[0m"
-  echo -e "\033[1;32m5. help      Show help\033[0m"
-  echo -e "\033[1;31m6. Sair      Exit Secbuild\033[0m"
-  echo
-  read -r -p "Choose an option: " user_option
-  echo
-
-  case $user_option in
-    1)
-      [[ $check_mode == 1 ]] && { checklist_report; exit; }
-      for tool in ${selection,,}; do
-        tool_list=${!tools[*]}
-        if in_array "$tool" ${tool_list,,}; then
-          export url script
-          IFS='|' read -r url script depends post_install <<<"${tools[$tool]}"
-          if [[ $url || $post_install ]]; then
-            print_message "Installing ${tool^}"
-            [[ $url ]] && git_install "$url" "$script"
-            [[ $post_install ]] && {
-              result=$(bash -c "$post_install" 2>>$logerr >>$logfile) | progressbar -s normal -m "${tool^}: Installation"
-            }
-          fi
-        fi
-      done
-      show_result
-      show_menu
-      ;;
-    2)
-      declare -A categories
-      categories[1]="Information gathering"
-      categories[2]="Vulnerability analysis"
-      categories[3]="Wireless attacks"
-      categories[4]="Web applications"
-      categories[5]="Sniffing spoofing"
-      categories[6]="Maintaining access"
-      categories[7]="Reporting tools"
-      categories[8]="Exploitation tools"
-      categories[9]="Forensics tools"
-      categories[10]="Stress testing"
-      categories[11]="Password attacks"
-      categories[12]="Reverse engineering"
-      categories[13]="Hardware hacking"
-      categories[14]="ExtraLinux tools"
-      categories[15]="Extras"
-
-      declare -A tools
-      tools[1]="acccheck ace-voip amap automater braa casefile cdpsnarf cisco-torch cookie-cadger copy-router-config dmitry dnmap dnsenum dnsmap dnsrecon dnstracer dnswalk dotdotpwn enum4linux enumiax fierce firewalk fragroute fragrouter ghost-phisher golismero goofile xplico hping3 intrace ismtp lbd maltego-teeth masscan metagoofil miranda nbtscan-unixwiz nmap p0f parsero recon-ng set smtp-user-enum snmpcheck sslcaudit sslsplit sslstrip sslyze thc-ipv6 theharvester tlssled twofi urlcrazy wireshark wol-e"
-      tools[2]="bbqsql bed cisco-auditing-tool cisco-global-exploiter cisco-ocs cisco-torch copy-router-config doona dotdotpwn greenbone-security-assistant hexorbase jsql lynis nmap ohrwurm openvas-administrator openvas-cli openvas-manager openvas-scanner oscanner powerfuzzer sfuzz sidguesser siparmyknife sqlmap sqlninja sqlsus thc-ipv6 tnscmd10g unix-privesc-check yersinia"
-      tools[3]="aircrack-ng asleap bluelog blueranger bluesnarfer bully cowpatty crackle eapmd5pass fern-wifi-cracker ghost-phisher giskismet gqrx hostapd-wpe kalibrate-rtl killerbee kismet mdk3 mfcuk mfoc mfterm multimon-ng pixiewps reaver redfang rtlsdr-scanner spooftooph wifi-honey wifiphisher wifitap wifite"
-      tools[4]="apache-users arachni bbqsql blindelephant burpsuite cutycapt davtest deblaze dirb dirbuster fimap funkload gobuster grabber jboss-autopwn joomscan jsql maltego-teeth padbuster paros parsero plecost powerfuzzer proxystrike recon-ng skipfish sqlmap sqlninja sqlsus ua-tester uniscan vega w3af webscarab websploit wfuzz wpscan xsser zaproxy"
-      tools[5]="burpsuite dnschef fiked hamster-sidejack hexinject iaxflood inviteflood ismtp isr-evilgrade mitmproxy ohrwurm protos-sip rebind responder rtpbreak rtpinsertsound rtpmixsound sctpscan siparmyknife sipp sipvicious sniffjoke sslsplit sslstrip sslyze thc-ipv6 voiphopper webscarab wifi-honey wireshark xspy yersinia zaproxy"
-      tools[6]="cryptcat cymothoa dbd dns2tcp http-tunnel httptunnel intersect nishang polenum powersploit pwnat ridenum sbd u3-pwn webshells weevely winexe"
-      tools[7]="casefile cutycapt dos2unix dradis keepnote magictree metagoofil nipper-ng pipal"
-      tools[8]="armitage backdoor-factory beef-xss cisco-auditing-tool cisco-global-exploiter cisco-ocs cisco-torch crackle exploitdb jboss-autopwn linux-exploit-suggester maltego-teeth set shellnoob sqlmap thc-ipv6 yersinia"
-      tools[9]="binwalk bulk-extractor chntpw cuckoo dc3dd ddrescue python-distorm3 dumpzilla volatility xplico foremost galleta guymager iphone-backup-analyzer p0f pdf-parser pdfid pdgmail peepdf extundelete"
-      tools[10]="dhcpig funkload iaxflood inviteflood ipv6-toolkit mdk3 reaver rtpflood slowhttptest t50 termineter thc-ipv6 thc-ssl-dos"
-      tools[11]="acccheck burpsuite cewl chntpw cisco-auditing-tool cmospwd creddump crunch findmyhash gpp-decrypt hash-identifier hexorbase hydra john johnny keimpx maltego-teeth maskprocessor multiforcer ncrack oclgausscrack pack patator polenum rainbowcrack rcracki-mt rsmangler statsprocessor thc-pptp-bruter truecrack webscarab wordlists zaproxy"
-      tools[12]="apktool dex2jar python-distorm3 edb-debugger jad javasnoop smali valgrind yara"
-      tools[13]="android-sdk apktool arduino dex2jar sakis3g smali"
-      tools[14]="kali-linux kali-linux-full kali-linux-all kali-linux-top10 kali-linux-forensic kali-linux-gpu kali-linux-pwtools kali-linux-rfid kali-linux-sdr kali-linux-voip kali-linux-web kali-linux-wireless squid3"
-      tools[15]=$(read_package_ini "$workdir/package.ini")
-
-      export GTK_THEME=CustomTheme
-
-      while true; do
-        # Creating the categories array
-        categorias=()
-        for i in {1..15}; do
-          categorias+=("$i - ${categories[$i]}")
+spinner() {
+    local pid="$1"
+    local task="$2"
+    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    
+    while kill -0 "$pid" 2>/dev/null; do
+        for i in $(seq 0 9); do
+            printf "\r${CYAN}${spinstr:$i:1}${RESET} %s" "$task"
+            sleep 0.1
         done
+    done
+    printf "\r%*s\r" $((${#task} + 2)) ""
+}
 
-        # Displaying the category selection window
-        categoria_selecionada=$(yad --center --width 400 --height 450 --title "Select a category" --button "Exit:1" --button "Select:0" --list --column "Categories" "${categorias[@]}")
-        codigo_saida=$?
+# ==============================================================================
+# FUNÇÕES DE SISTEMA E DETECÇÃO
+# ==============================================================================
 
-        if [ $codigo_saida -eq 1 ]; then
-          show_menu
-          break
+detect_system() {
+    info "Detectando sistema operacional..."
+    
+    # Verificar se é Linux
+    if [[ "$OSTYPE" != "linux-gnu"* ]]; then
+        error "Este script suporta apenas sistemas Linux (Kali/Ubuntu)"
+        error "Sistema detectado: $OSTYPE"
+        exit 1
+    fi
+    
+    # Detectar distribuição Linux
+    if [[ -f /etc/os-release ]]; then
+        . /etc/os-release
+        DISTRO="${ID:-unknown}"
+        debug "Distribuição detectada: $DISTRO"
+        
+        # Verificar compatibilidade
+        case "$DISTRO" in
+            kali|ubuntu|debian)
+                success "Sistema compatível detectado: $DISTRO"
+                ;;
+            *)
+                warning "Distribuição '$DISTRO' não testada. O script pode não funcionar corretamente."
+                read -p "Deseja continuar mesmo assim? (s/N): " -n 1 -r
+                echo
+                if [[ ! $REPLY =~ ^[Ss]$ ]]; then
+                    exit 1
+                fi
+                ;;
+        esac
+    else
+        error "Não foi possível detectar a distribuição Linux"
+        exit 1
+    fi
+    
+    # Detectar gerenciador de pacotes
+    if command -v apt-get &>/dev/null; then
+        PKG_MANAGER="apt"
+        debug "Gerenciador de pacotes: APT"
+    else
+        error "APT não encontrado. Este script requer APT (Kali/Ubuntu)"
+        exit 1
+    fi
+    
+    success "Sistema: $DISTRO | Gerenciador: $PKG_MANAGER"
+}
+
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        error "Este script precisa ser executado como root!"
+        info "Use: sudo $SCRIPT_NAME"
+        exit 1
+    fi
+}
+
+create_directories() {
+    info "Criando estrutura de diretórios..."
+    local dirs=(
+        "$WORK_DIR"
+        "$SRC_DIR"
+        "$LOG_DIR"
+        "$CACHE_DIR"
+        "$VENDOR_DIR"
+        "$CONFIG_DIR"
+        "$BACKUP_DIR"
+    )
+    
+    for dir in "${dirs[@]}"; do
+        if [[ ! -d "$dir" ]]; then
+            mkdir -p "$dir" || {
+                error "Falha ao criar diretório: $dir"
+                exit 1
+            }
+            debug "Diretório criado: $dir"
         fi
+    done
+    
+    # Garantir BIN_DIR no PATH
+    case ":$PATH:" in
+        *":$BIN_DIR:"*) 
+            debug "BIN_DIR já está no PATH"
+            ;;
+        *) 
+            export PATH="$BIN_DIR:$PATH"
+            debug "BIN_DIR adicionado ao PATH"
+            ;;
+    esac
+    
+    success "Estrutura de diretórios criada"
+}
 
-        if [ -n "$categoria_selecionada" ]; then
-          categoria_selecionada=${categoria_selecionada%% *}
-          ferramentas=()
-          for ferramenta in ${tools[$categoria_selecionada]}; do
-            ferramentas+=("$ferramenta")
-          done
-          
-          # Displaying the tool selection window
-          ferramenta_selecionada=$(yad --center --width 400 --height 450 --title "Select a tool" --button "Exit:1" --button "Voltar:2" --button "Select:0" --list --column "Tools" --separator='\n' "${ferramentas[@]}")
-          codigo_saida_ferramenta=$?
+# ==============================================================================
+# INSTALAÇÃO DE DEPENDÊNCIAS CRÍTICAS (MELHORADA)
+# ==============================================================================
 
-          if [ $codigo_saida_ferramenta -eq 1 ]; then
-            exit 0
-          elif [ $codigo_saida_ferramenta -eq 2 ]; then
-            continue
-          fi
+# Verificação melhorada de pacotes instalados
+pkg_installed_apt() {
+    local package="$1"
+    
+    # Primeiro tenta verificar via dpkg-query
+    if dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed"; then
+        return 0
+    fi
+    
+    # Fallback: verificar se o comando existe
+    if command -v "$package" >/dev/null 2>&1; then
+        return 0
+    fi
+    
+    return 1
+}
 
-          if [ -n "$ferramenta_selecionada" ]; then
-            # Installing the selected tool
-            IFS=$'\n' read -r -d '' -a ferramentas_selecionadas <<< "$ferramenta_selecionada"
-            all_installed=true
-            for ferramenta in "${ferramentas_selecionadas[@]}"; do
-              echo -e "\nInstalling $ferramenta..."
-              IFS='|' read -r url script depends post_install <<<"${tools[$ferramenta]}"
-              if [[ -n $url ]]; then
-                if ! git_install "$url" "$script" 2>&1; then
-                  error_messages+="Error installing $ferramenta from $url\n"
-                  all_installed=false
-                fi
-              elif [[ -n $post_install ]]; then
-                if ! bash -c "$post_install" 2>&1; then
-                  error_messages+="Error installing $ferramenta script\n"
-                  all_installed=false
-                fi
-              else
-                if ! apt install -y $ferramenta 2>&1; then
-                  error_messages+="Error installing $ferramenta with apt:\n$apt_output\n"
-                  all_installed=false
-                fi
-              fi
-            done
-
-            if $all_installed; then
-              option=$(yad --center --width 200 --height 200 --title "What do you want to do now?" --text "Installation complete!" --button="Back to main menu:1" --button="Back to categories menu:2" --button="Exit:3")
+install_core_dependencies() {
+    info "Instalando dependências principais do sistema..."
+    
+    local core_deps=(
+        "curl"
+        "wget"
+        "git"
+        "build-essential"
+        "python3"
+        "python3-pip"
+        "golang-go"
+        "cargo"
+        "cmake"
+        "jq"
+        "dialog"
+        "bc"
+        "realpath"
+    )
+    
+    # Atualizar repositórios
+    info "Atualizando repositórios APT..."
+    if ! apt-get update -qq 2>>"$ERROR_LOG"; then
+        warning "Falha ao atualizar repositórios"
+    fi
+    
+    # Instalar dependências
+    local failed_deps=()
+    for dep in "${core_deps[@]}"; do
+        if ! pkg_installed_apt "$dep"; then
+            info "Instalando $dep..."
+            if ! apt-get install -y -qq "$dep" &>>"$LOG_FILE"; then
+                warning "Falha ao instalar $dep"
+                failed_deps+=("$dep")
             else
-              option=$(yad --center --width 400 --height 300 --title "What do you want to do now?" --text "Installation encountered errors:\n$error_messages" --button="Back to main menu:1" --button="Back to categories menu:2" --button="Exit:3")
+                debug "$dep instalado com sucesso"
+            fi
+        else
+            debug "$dep já está instalado"
+        fi
+    done
+    
+    # Relatar falhas
+    if [[ ${#failed_deps[@]} -gt 0 ]]; then
+        warning "Algumas dependências falharam: ${failed_deps[*]}"
+        warning "Você pode precisar instalá-las manualmente"
+    else
+        success "Todas as dependências principais instaladas"
+    fi
+    
+    # Configurar pip se necessário
+    if command -v pip3 &>/dev/null; then
+        debug "Atualizando pip..."
+        pip3 install --upgrade pip &>>"$LOG_FILE" || warning "Falha ao atualizar pip"
+    fi
+}
+
+install_vendor_tools() {
+    info "Baixando ferramentas auxiliares..."
+    
+    # Instalar progressbar
+    if [[ ! -d "$VENDOR_DIR/progressbar" ]]; then
+        info "Instalando progressbar..."
+        if git clone -q "$PROGRESSBAR_URL" "$VENDOR_DIR/progressbar" &>>"$LOG_FILE"; then
+            debug "Progressbar instalado"
+        else
+            warning "Falha ao instalar progressbar"
+        fi
+    fi
+    
+    # Instalar bash-ini-parser
+    if [[ ! -d "$VENDOR_DIR/bash-ini-parser" ]]; then
+        info "Instalando bash-ini-parser..."
+        if git clone -q "$INI_PARSER_URL" "$VENDOR_DIR/bash-ini-parser" &>>"$LOG_FILE"; then
+            debug "Bash-ini-parser instalado"
+        else
+            warning "Falha ao instalar bash-ini-parser"
+        fi
+    fi
+    
+    # Verificar e carregar o parser
+    if [[ -f "$VENDOR_DIR/bash-ini-parser/bash-ini-parser" ]]; then
+        source "$VENDOR_DIR/bash-ini-parser/bash-ini-parser"
+        success "Ferramentas auxiliares instaladas"
+    else
+        warning "Bash-ini-parser não encontrado, usando parser manual"
+    fi
+}
+
+# ==============================================================================
+# DOWNLOAD E PARSE DO ARQUIVO INI (MELHORADO)
+# ==============================================================================
+
+download_package_ini() {
+    local ini_file="$CONFIG_DIR/package.ini"
+    
+    info "Baixando arquivo de configuração das ferramentas..."
+    
+    # Fazer backup se existir
+    if [[ -f "$ini_file" ]]; then
+        local backup_file="$BACKUP_DIR/package.ini.$(date +%Y%m%d_%H%M%S)"
+        cp "$ini_file" "$backup_file"
+        debug "Backup criado: $backup_file"
+    fi
+    
+    # Primeiro tentar copiar o arquivo local
+    if [[ -f "$SCRIPT_DIR/package-dist.ini" ]]; then
+        cp "$SCRIPT_DIR/package-dist.ini" "$ini_file"
+        success "Arquivo de configuração copiado localmente"
+    else
+        # Baixar do repositório com retry
+        local attempt=1
+        while [[ $attempt -le $RETRY_COUNT ]]; do
+            if wget -q -O "$ini_file" --timeout="$DOWNLOAD_TIMEOUT" "$PACKAGE_INI_URL"; then
+                success "Arquivo de configuração baixado"
+                break
+            else
+                warning "Tentativa $attempt/$RETRY_COUNT falhou"
+                ((attempt++))
+                [[ $attempt -le $RETRY_COUNT ]] && sleep "$RETRY_DELAY"
+            fi
+        done
+        
+        if [[ $attempt -gt $RETRY_COUNT ]]; then
+            error "Falha ao baixar arquivo de configuração após $RETRY_COUNT tentativas"
+            return 1
+        fi
+    fi
+    
+    [[ -r "$ini_file" ]] || {
+        error "Arquivo de configuração não encontrado ou sem permissão de leitura"
+        return 1
+    }
+}
+
+parse_package_ini() {
+    local ini_file="$CONFIG_DIR/package.ini"
+    
+    info "Processando configuração das ferramentas..."
+    
+    if [[ ! -f "$ini_file" ]]; then
+        error "Arquivo package.ini não encontrado"
+        return 1
+    fi
+    
+    # Limpar registro anterior
+    TOOLS_REGISTRY=()
+    
+    # Parse manual do arquivo INI (melhorado)
+    local current_tool=""
+    local url=""
+    local script=""
+    local depends=""
+    local post_install=""
+    
+    while IFS= read -r line; do
+        # Remove espaços em branco
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        
+        # Pular linhas vazias e comentários (# ou ;)
+        [[ -z "$line" ]] && continue
+        [[ "$line" =~ ^[[:space:]]*[\#\;] ]] && continue
+        
+        # Nova seção (ferramenta)
+        if [[ "$line" =~ ^\[([^]]+)\]$ ]]; then
+            # Salvar ferramenta anterior se existir
+            if [[ -n "$current_tool" ]]; then
+                TOOLS_REGISTRY["$current_tool"]="$url|$script|$depends|$post_install"
+                debug "Registrada ferramenta: $current_tool"
             fi
             
-            case $? in
-              1)
-                show_menu
-                ;;
-              2)
-                continue
-                ;;
-              3)
+            # Iniciar nova ferramenta
+            current_tool="${BASH_REMATCH[1],,}"  # Converter para minúsculas
+            url=""
+            script=""
+            depends=""
+            post_install=""
+            
+        # Processar atributos (key=value ou key = value)
+        elif [[ "$line" =~ ^([^=]+)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+            local key="${BASH_REMATCH[1]}"
+            local value="${BASH_REMATCH[2]}"
+            
+            # Remover espaços extras
+            key="${key#"${key%%[![:space:]]*}"}"
+            key="${key%"${key##*[![:space:]]}"}"
+            
+            # Remover aspas se existirem
+            value="${value#\'}"
+            value="${value%\'}"
+            value="${value#\"}"
+            value="${value%\"}"
+            
+            case "$key" in
+                url) url="$value" ;;
+                script) script="$value" ;;
+                depends) depends="$value" ;;
+                post_install) post_install="$value" ;;
+            esac
+        fi
+    done < "$ini_file"
+    
+    # Salvar última ferramenta
+    if [[ -n "$current_tool" ]]; then
+        TOOLS_REGISTRY["$current_tool"]="$url|$script|$depends|$post_install"
+        debug "Registrada ferramenta: $current_tool"
+    fi
+    
+    local tool_count="${#TOOLS_REGISTRY[@]}"
+    success "Configuração processada: $tool_count ferramentas disponíveis"
+    
+    # Debug: listar ferramentas carregadas
+    if [[ $VERBOSE_MODE -eq 1 ]]; then
+        debug "Ferramentas carregadas:"
+        for tool in "${!TOOLS_REGISTRY[@]}"; do
+            debug "  - $tool"
+        done
+    fi
+}
+
+# ==============================================================================
+# FUNÇÕES AUXILIARES PARA DETECÇÃO DE FERRAMENTAS
+# ==============================================================================
+
+# Obtém os possíveis nomes de binário para uma ferramenta
+binary_names_for_tool() {
+    local tool="$1"
+    IFS='|' read -r _url script _deps _post <<< "${TOOLS_REGISTRY[$tool]}"
+    
+    local guess="$tool"
+    if [[ -n "$script" ]]; then
+        guess="${script##*/}"
+        guess="${guess%.*}"
+    fi
+    
+    # Retorna ambos: nome da ferramenta e nome inferido do script
+    printf '%s\n' "$tool" "$guess" | sort -u
+}
+
+# Verifica se uma ferramenta está instalada
+is_installed_tool() {
+    local tool="$1"
+    local binary
+    
+    while IFS= read -r binary; do
+        if command -v "$binary" >/dev/null 2>&1; then
+            return 0
+        fi
+        if [[ -L "$BIN_DIR/$binary" ]] || [[ -x "$BIN_DIR/$binary" ]]; then
+            return 0
+        fi
+    done < <(binary_names_for_tool "$tool")
+    
+    return 1
+}
+
+# ==============================================================================
+# FUNÇÕES DE INSTALAÇÃO DE FERRAMENTAS (MELHORADAS)
+# ==============================================================================
+
+install_from_git() {
+    local repo_url="$1"
+    local script_name="$2"
+    local tool_name="$3"
+    
+    # Extrair nome do repositório
+    local repo_name="${repo_url##*/}"
+    repo_name="${repo_name%.git}"
+    local vendor="${repo_url%/*}"
+    vendor="${vendor##*/}"
+    
+    local install_path="$SRC_DIR/$vendor/$repo_name"
+    
+    debug "Instalando $tool_name do Git: $repo_url"
+    
+    # Clone ou update
+    if [[ -d "$install_path/.git" ]]; then
+        debug "Atualizando repositório existente..."
+        if git -C "$install_path" pull -q --all &>>"$LOG_FILE"; then
+            debug "Repositório atualizado: $repo_name"
+        else
+            warning "Falha ao atualizar $repo_name"
+            return 1
+        fi
+    else
+        debug "Clonando repositório..."
+        mkdir -p "$(dirname "$install_path")"
+        if git clone -q "$repo_url" "$install_path" &>>"$LOG_FILE"; then
+            debug "Repositório clonado: $repo_name"
+        else
+            error "Falha ao clonar $repo_name"
+            return 1
+        fi
+    fi
+    
+    # Instalar dependências Python se existirem
+    if [[ -f "$install_path/requirements.txt" ]]; then
+        debug "Instalando dependências Python..."
+        if pip3 install -q -r "$install_path/requirements.txt" &>>"$LOG_FILE"; then
+            debug "Requirements.txt instalado para $tool_name"
+        else
+            warning "Falha ao instalar requirements.txt para $tool_name"
+        fi
+    fi
+    
+    # Instalar via setup.py se existir
+    if [[ -f "$install_path/setup.py" ]]; then
+        debug "Executando setup.py..."
+        if (cd "$install_path" && python3 setup.py -q install) &>>"$LOG_FILE"; then
+            debug "Setup.py executado para $tool_name"
+        else
+            warning "Falha ao executar setup.py para $tool_name"
+        fi
+    fi
+    
+    # Criar link simbólico se script especificado
+    if [[ -n "$script_name" ]]; then
+        local script_path="$install_path/$script_name"
+        if [[ -f "$script_path" ]]; then
+            chmod +x "$script_path"
+            local bin_name="${script_name##*/}"
+            bin_name="${bin_name%.*}"
+            ln -sf "$script_path" "$BIN_DIR/$bin_name"
+            debug "Link criado: $BIN_DIR/$bin_name -> $script_path"
+        else
+            warning "Script não encontrado: $script_path"
+        fi
+    fi
+    
+    return 0
+}
+
+# Instalação via Go (melhorada com @latest automático)
+install_with_go() {
+    local go_package="$1"
+    local tool_name="$2"
+    
+    debug "Instalando $tool_name via Go: $go_package"
+    
+    export GOPATH="$SRC_DIR/go"
+    export GOBIN="$BIN_DIR"
+    
+    # Adicionar @latest se não tiver versão especificada
+    [[ "$go_package" != *@* ]] && go_package="${go_package}@latest"
+    
+    if go install "$go_package" &>>"$LOG_FILE"; then
+        debug "$tool_name instalado via Go"
+        return 0
+    else
+        error "Falha ao instalar $tool_name via Go ($go_package)"
+        return 1
+    fi
+}
+
+# Execução segura de comandos pós-instalação
+execute_post_install() {
+    local commands="$1"
+    local tool_name="$2"
+    
+    debug "Executando comandos pós-instalação para $tool_name"
+    
+    # Substituir variáveis
+    commands="${commands//\$installdir/$SRC_DIR}"
+    commands="${commands//\$bindir/$BIN_DIR}"
+    commands="${commands//\$srcdir/$SRC_DIR}"
+    
+    debug "post_install($tool_name): $commands"
+    
+    # Executar com shell restrito e modo seguro
+    if /usr/bin/env bash -euo pipefail -c "$commands" &>>"$LOG_FILE"; then
+        debug "Pós-instalação concluída para $tool_name"
+        return 0
+    else
+        error "Falha no pós-instalação de $tool_name"
+        return 1
+    fi
+}
+
+install_single_tool() {
+    local tool_name="$1"
+    
+    # Verificar se a ferramenta existe no registro
+    if [[ -z "${TOOLS_REGISTRY[$tool_name]:-}" ]]; then
+        warning "Ferramenta '$tool_name' não encontrada no registro"
+        return 1
+    fi
+    
+    # Verificar se já está instalada
+    if is_installed_tool "$tool_name"; then
+        info "$tool_name já está instalado"
+        SKIPPED_TOOLS+=("$tool_name")
+        return 0
+    fi
+    
+    info "Instalando $tool_name..."
+    
+    # Extrair informações da ferramenta
+    IFS='|' read -r url script depends post_install <<< "${TOOLS_REGISTRY[$tool_name]}"
+    
+    local install_success=0
+    
+    # Instalar dependências primeiro
+    if [[ -n "$depends" ]]; then
+        debug "Instalando dependências: $depends"
+        if apt-get install -y -qq $depends &>>"$LOG_FILE"; then
+            debug "Dependências instaladas: $depends"
+        else
+            warning "Falha ao instalar dependências: $depends"
+        fi
+    fi
+    
+    # Instalar a ferramenta
+    if [[ -n "$url" ]]; then
+        install_from_git "$url" "$script" "$tool_name" && install_success=1
+    fi
+    
+    if [[ -n "$post_install" ]]; then
+        # Verificar se é instalação Go
+        if [[ "$post_install" =~ go[[:space:]]install ]]; then
+            local go_pkg="${post_install#*go install }"
+            go_pkg="${go_pkg%% *}"
+            install_with_go "$go_pkg" "$tool_name" && install_success=1
+        else
+            execute_post_install "$post_install" "$tool_name" && install_success=1
+        fi
+    fi
+    
+    # Se não tem URL nem post_install, tentar instalar via APT
+    if [[ -z "$url" && -z "$post_install" ]]; then
+        debug "Tentando instalar $tool_name via APT"
+        if apt-get install -y -qq "$tool_name" &>>"$LOG_FILE"; then
+            install_success=1
+        fi
+    fi
+    
+    if [[ $install_success -eq 1 ]]; then
+        TOOLS_STATUS["$tool_name"]="installed"
+        INSTALLED_TOOLS+=("$tool_name")
+        success "✓ $tool_name instalado com sucesso"
+        return 0
+    else
+        TOOLS_STATUS["$tool_name"]="failed"
+        FAILED_TOOLS+=("$tool_name")
+        error "✗ Falha ao instalar $tool_name"
+        return 1
+    fi
+}
+
+install_all_tools() {
+    info "Iniciando instalação de todas as ferramentas..."
+    
+    local total="${#TOOLS_REGISTRY[@]}"
+    local current=0
+    
+    for tool in "${!TOOLS_REGISTRY[@]}"; do
+        ((current++))
+        show_progress "$current" "$total" "Instalando $tool..."
+        install_single_tool "$tool" || true  # Continua mesmo se falhar
+    done
+    
+    echo  # Nova linha após progress bar
+    print_installation_summary
+}
+
+# ==============================================================================
+# MENU INTERATIVO
+# ==============================================================================
+
+show_main_menu() {
+    while true; do
+        clear
+        print_banner
+        
+        echo -e "${CYAN}Menu Principal${RESET}"
+        echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+        echo
+        echo -e "  ${GREEN}1)${RESET} Instalar todas as ferramentas"
+        echo -e "  ${GREEN}2)${RESET} Instalar ferramentas específicas"
+        echo -e "  ${GREEN}3)${RESET} Listar ferramentas disponíveis"
+        echo -e "  ${GREEN}4)${RESET} Verificar ferramentas instaladas"
+        echo -e "  ${GREEN}5)${RESET} Atualizar ferramentas existentes"
+        echo -e "  ${GREEN}6)${RESET} Configurações"
+        echo -e "  ${GREEN}7)${RESET} Ver logs"
+        echo -e "  ${GREEN}8)${RESET} Sobre"
+        echo -e "  ${RED}0)${RESET} Sair"
+        echo
+        echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+        echo
+        
+        read -rp "Escolha uma opção: " choice
+        
+        case "$choice" in
+            1) menu_install_all ;;
+            2) menu_install_specific ;;
+            3) menu_list_tools ;;
+            4) menu_check_installed ;;
+            5) menu_update_tools ;;
+            6) menu_settings ;;
+            7) menu_view_logs ;;
+            8) menu_about ;;
+            0) exit_script ;;
+            *) warning "Opção inválida!" && sleep 2 ;;
+        esac
+    done
+}
+
+menu_install_all() {
+    clear
+    print_banner
+    
+    echo -e "${CYAN}Instalação Completa${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    info "Esta operação instalará todas as ${#TOOLS_REGISTRY[@]} ferramentas disponíveis."
+    warning "Isso pode levar bastante tempo!"
+    echo
+    
+    read -rp "Deseja continuar? (s/N): " confirm
+    if [[ "$confirm" =~ ^[Ss]$ ]]; then
+        install_all_tools
+        echo
+        read -rp "Pressione ENTER para continuar..."
+    fi
+}
+
+menu_install_specific() {
+    clear
+    print_banner
+    
+    echo -e "${CYAN}Instalação Específica${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    
+    # Criar array ordenado de ferramentas
+    local tools_array=()
+    for tool in "${!TOOLS_REGISTRY[@]}"; do
+        tools_array+=("$tool")
+    done
+    IFS=$'\n' sorted_tools=($(sort <<<"${tools_array[*]}"))
+    
+    # Mostrar ferramentas em colunas
+    local cols=3
+    local per_col=$(( (${#sorted_tools[@]} + cols - 1) / cols ))
+    
+    for ((i=0; i<per_col; i++)); do
+        for ((j=0; j<cols; j++)); do
+            local idx=$((i + j * per_col))
+            if [[ $idx -lt ${#sorted_tools[@]} ]]; then
+                local tool="${sorted_tools[$idx]}"
+                local status=""
+                if is_installed_tool "$tool"; then
+                    status="${GREEN}✓${RESET}"
+                else
+                    status="${RED}✗${RESET}"
+                fi
+                printf "[%b] %-25s" "$status" "$tool"
+            fi
+        done
+        echo
+    done
+    
+    echo
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    read -rp "Digite o nome da ferramenta (ou 'voltar'): " tool_name
+    
+    if [[ "$tool_name" == "voltar" ]]; then
+        return
+    fi
+    
+    tool_name="${tool_name,,}"  # Converter para minúsculas
+    
+    if [[ -n "${TOOLS_REGISTRY[$tool_name]:-}" ]]; then
+        install_single_tool "$tool_name"
+        echo
+        read -rp "Pressione ENTER para continuar..."
+    else
+        error "Ferramenta '$tool_name' não encontrada!"
+        sleep 2
+    fi
+}
+
+menu_list_tools() {
+    clear
+    print_banner
+    
+    echo -e "${CYAN}Ferramentas Disponíveis${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    
+    local count=0
+    local installed_count=0
+    
+    for tool in $(echo "${!TOOLS_REGISTRY[@]}" | tr ' ' '\n' | sort); do
+        ((count++))
+        
+        # Verificar se está instalada usando a função melhorada
+        local status="${RED}✗${RESET}"
+        if is_installed_tool "$tool"; then
+            status="${GREEN}✓${RESET}"
+            ((installed_count++))
+        fi
+        
+        printf "%3d. [%b] %-20s" "$count" "$status" "$tool"
+        
+        # Adicionar quebra de linha a cada 3 itens
+        if [[ $((count % 3)) -eq 0 ]]; then
+            echo
+        fi
+    done
+    
+    [[ $((count % 3)) -ne 0 ]] && echo
+    
+    echo
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo -e "Total: ${GREEN}$count${RESET} ferramentas | Instaladas: ${GREEN}$installed_count${RESET}"
+    echo
+    read -rp "Pressione ENTER para continuar..."
+}
+
+menu_check_installed() {
+    clear
+    print_banner
+    
+    echo -e "${CYAN}Verificando Ferramentas Instaladas${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    
+    local installed_count=0
+    local not_installed_count=0
+    
+    echo -e "${GREEN}Instaladas:${RESET}"
+    for tool in $(echo "${!TOOLS_REGISTRY[@]}" | tr ' ' '\n' | sort); do
+        if is_installed_tool "$tool"; then
+            # Mostrar os binários encontrados
+            local binaries=$(binary_names_for_tool "$tool" | tr '\n' ', ' | sed 's/, $//')
+            echo "  ✓ $tool [$binaries]"
+            ((installed_count++))
+        fi
+    done
+    
+    echo
+    echo -e "${RED}Não instaladas:${RESET}"
+    for tool in $(echo "${!TOOLS_REGISTRY[@]}" | tr ' ' '\n' | sort); do
+        if ! is_installed_tool "$tool"; then
+            echo "  ✗ $tool"
+            ((not_installed_count++))
+        fi
+    done
+    
+    echo
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo -e "Resumo: ${GREEN}$installed_count instaladas${RESET} | ${RED}$not_installed_count não instaladas${RESET}"
+    echo
+    read -rp "Pressione ENTER para continuar..."
+}
+
+menu_update_tools() {
+    clear
+    print_banner
+    
+    echo -e "${CYAN}Atualizar Ferramentas${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    info "Verificando atualizações para ferramentas Git..."
+    echo
+    
+    local updated=0
+    local failed=0
+    
+    # Usar find para buscar repositórios Git
+    while IFS= read -r -d '' git_dir; do
+        local repo_dir="${git_dir%/.git}"
+        local repo_name="${repo_dir##*/}"
+        
+        echo -n "Atualizando $repo_name... "
+        
+        if git -C "$repo_dir" pull -q --all &>>"$LOG_FILE"; then
+            echo -e "${GREEN}✓${RESET}"
+            ((updated++))
+        else
+            echo -e "${RED}✗${RESET}"
+            ((failed++))
+        fi
+    done < <(find "$SRC_DIR" -type d -name .git -print0 2>/dev/null)
+    
+    if [[ $((updated + failed)) -eq 0 ]]; then
+        warning "Nenhum repositório Git encontrado"
+    else
+        echo
+        echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+        echo -e "Resultado: ${GREEN}$updated atualizadas${RESET} | ${RED}$failed falharam${RESET}"
+    fi
+    
+    echo
+    read -rp "Pressione ENTER para continuar..."
+}
+
+menu_about() {
+    clear
+    print_banner
+    
+    echo -e "${CYAN}Sobre o SecBuild${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    echo -e "${GREEN}SecBuild v$SCRIPT_VERSION${RESET}"
+    echo
+    echo "Ferramenta robusta e otimizada para instalação automatizada"
+    echo "de ferramentas de segurança e pentesting."
+    echo
+    echo -e "${CYAN}Características:${RESET}"
+    echo "  • Instalação automatizada de 100+ ferramentas"
+    echo "  • Otimizado para Kali Linux e Ubuntu"
+    echo "  • Detecção inteligente de ferramentas instaladas"
+    echo "  • Gerenciamento avançado de dependências"
+    echo "  • Sistema de logs detalhado"
+    echo "  • Tratamento robusto de erros"
+    echo "  • Interface interativa amigável"
+    echo
+    echo -e "${CYAN}Compatibilidade:${RESET}"
+    echo "  • Kali Linux (todas as versões)"
+    echo "  • Ubuntu 20.04+"
+    echo "  • Debian 10+"
+    echo
+    echo -e "${CYAN}Diretórios:${RESET}"
+    echo "  • Trabalho: $WORK_DIR"
+    echo "  • Fontes:   $SRC_DIR"
+    echo "  • Binários: $BIN_DIR"
+    echo "  • Logs:     $LOG_DIR"
+    echo
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    read -rp "Pressione ENTER para continuar..."
+}
+
+# ==============================================================================
+# FUNÇÕES AUXILIARES
+# ==============================================================================
+
+print_installation_summary() {
+    echo
+    echo -e "${CYAN}Resumo da Instalação${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    
+    if [[ ${#INSTALLED_TOOLS[@]} -gt 0 ]]; then
+        echo -e "${GREEN}Instaladas com sucesso (${#INSTALLED_TOOLS[@]}):${RESET}"
+        for tool in "${INSTALLED_TOOLS[@]}"; do
+            echo "  ✓ $tool"
+        done
+    fi
+    
+    if [[ ${#FAILED_TOOLS[@]} -gt 0 ]]; then
+        echo
+        echo -e "${RED}Falharam (${#FAILED_TOOLS[@]}):${RESET}"
+        for tool in "${FAILED_TOOLS[@]}"; do
+            echo "  ✗ $tool"
+        done
+    fi
+    
+    if [[ ${#SKIPPED_TOOLS[@]} -gt 0 ]]; then
+        echo
+        echo -e "${YELLOW}Puladas/Já instaladas (${#SKIPPED_TOOLS[@]}):${RESET}"
+        for tool in "${SKIPPED_TOOLS[@]}"; do
+            echo "  ⊘ $tool"
+        done
+    fi
+    
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    
+    local total=$((${#INSTALLED_TOOLS[@]} + ${#FAILED_TOOLS[@]} + ${#SKIPPED_TOOLS[@]}))
+    local success_rate=0
+    if [[ $total -gt 0 ]]; then
+        success_rate=$(( (${#INSTALLED_TOOLS[@]} + ${#SKIPPED_TOOLS[@]}) * 100 / total ))
+    fi
+    
+    echo -e "Taxa de sucesso: ${GREEN}${success_rate}%${RESET}"
+    
+    if [[ ${#FAILED_TOOLS[@]} -gt 0 ]]; then
+        echo
+        warning "Verifique o log para mais detalhes sobre as falhas:"
+        warning "$ERROR_LOG"
+    fi
+}
+
+menu_view_logs() {
+    clear
+    print_banner
+    
+    echo -e "${CYAN}Visualizar Logs${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    echo "  1) Log completo"
+    echo "  2) Log de erros"
+    echo "  3) Últimas 50 linhas do log"
+    echo "  4) Listar todos os logs"
+    echo "  5) Limpar logs antigos"
+    echo "  6) Voltar"
+    echo
+    
+    read -rp "Escolha uma opção: " choice
+    
+    case "$choice" in
+        1) 
+            if [[ -f "$LOG_FILE" ]]; then
+                less "$LOG_FILE"
+            else
+                warning "Log não encontrado"
+                sleep 2
+            fi
+            ;;
+        2) 
+            if [[ -f "$ERROR_LOG" ]]; then
+                less "$ERROR_LOG"
+            else
+                warning "Log de erros não encontrado"
+                sleep 2
+            fi
+            ;;
+        3)
+            if [[ -f "$LOG_FILE" ]]; then
+                tail -n 50 "$LOG_FILE" | less
+            else
+                warning "Log não encontrado"
+                sleep 2
+            fi
+            ;;
+        4)
+            ls -lah "$LOG_DIR" | less
+            ;;
+        5)
+            find "$LOG_DIR" -type f -mtime +7 -delete 2>/dev/null
+            success "Logs com mais de 7 dias removidos"
+            sleep 2
+            ;;
+        6) 
+            return
+            ;;
+        *) 
+            warning "Opção inválida!"
+            sleep 2
+            ;;
+    esac
+}
+
+menu_settings() {
+    clear
+    print_banner
+    
+    echo -e "${CYAN}Configurações${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    echo "  1) Modo verbose: $([ $VERBOSE_MODE -eq 1 ] && echo "${GREEN}ON${RESET}" || echo "${RED}OFF${RESET}")"
+    echo "  2) Modo silencioso: $([ $SILENT_MODE -eq 1 ] && echo "${GREEN}ON${RESET}" || echo "${RED}OFF${RESET}")"
+    echo "  3) Atualizar lista de ferramentas"
+    echo "  4) Forçar reinstalação de dependências"
+    echo "  5) Resetar configurações"
+    echo "  6) Voltar"
+    echo
+    
+    read -rp "Escolha uma opção: " choice
+    
+    case "$choice" in
+        1) 
+            VERBOSE_MODE=$((1 - VERBOSE_MODE))
+            success "Modo verbose: $([ $VERBOSE_MODE -eq 1 ] && echo "ativado" || echo "desativado")"
+            sleep 1
+            ;;
+        2) 
+            SILENT_MODE=$((1 - SILENT_MODE))
+            success "Modo silencioso: $([ $SILENT_MODE -eq 1 ] && echo "ativado" || echo "desativado")"
+            sleep 1
+            ;;
+        3)
+            download_package_ini && parse_package_ini
+            success "Lista de ferramentas atualizada"
+            sleep 2
+            ;;
+        4)
+            rm -f "$DEPS_LOCK"
+            install_core_dependencies
+            install_vendor_tools
+            touch "$DEPS_LOCK"
+            success "Dependências reinstaladas"
+            sleep 2
+            ;;
+        5) 
+            rm -f "$CONFIG_FILE"
+            warning "Configurações resetadas"
+            sleep 2
+            ;;
+        6) 
+            return
+            ;;
+        *) 
+            warning "Opção inválida!"
+            sleep 2
+            ;;
+    esac
+    
+    # Salvar configurações
+    save_config
+}
+
+save_config() {
+    cat > "$CONFIG_FILE" <<EOF
+# SecBuild Configuration File
+# Generated: $(date)
+
+VERBOSE_MODE=$VERBOSE_MODE
+SILENT_MODE=$SILENT_MODE
+FORCE_UPDATE=$FORCE_UPDATE
+EOF
+    debug "Configurações salvas em $CONFIG_FILE"
+}
+
+load_config() {
+    if [[ -f "$CONFIG_FILE" ]]; then
+        source "$CONFIG_FILE"
+        debug "Configurações carregadas de $CONFIG_FILE"
+    fi
+}
+
+exit_script() {
+    echo
+    info "Encerrando SecBuild..."
+    
+    # Limpar arquivos temporários
+    rm -f /tmp/secbuild_* 2>/dev/null
+    
+    # Salvar estatísticas se houver
+    if [[ ${#INSTALLED_TOOLS[@]} -gt 0 || ${#FAILED_TOOLS[@]} -gt 0 || ${#SKIPPED_TOOLS[@]} -gt 0 ]]; then
+        print_installation_summary
+    fi
+    
+    success "SecBuild encerrado com sucesso!"
+    exit 0
+}
+
+# ==============================================================================
+# FUNÇÃO PRINCIPAL
+# ==============================================================================
+
+main() {
+    # Configurar cores
+    setup_colors
+    
+    # Verificar root
+    check_root
+    
+    # Detectar sistema (apenas Kali/Ubuntu)
+    detect_system
+    
+    # Criar diretórios e configurar PATH
+    create_directories
+    
+    # Carregar configurações se existirem
+    load_config
+    
+    # Parse argumentos da linha de comando
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                show_usage
                 exit 0
                 ;;
-              *)
+            -v|--verbose)
+                VERBOSE_MODE=1
+                shift
                 ;;
-            esac
-          fi
-        else
-          echo "Nenhuma categoria selecionada ou operação cancelada."
-          break
+            -f|--force)
+                FORCE_UPDATE=1
+                shift
+                ;;
+            -s|--silent)
+                SILENT_MODE=1
+                INTERACTIVE_MODE=0
+                shift
+                ;;
+            -l|--list)
+                # Garantir que temos o package.ini
+                if [[ ! -f "$CONFIG_DIR/package.ini" ]]; then
+                    download_package_ini
+                fi
+                parse_package_ini
+                menu_list_tools
+                exit 0
+                ;;
+            -i|--install)
+                shift
+                if [[ -n "${1:-}" ]]; then
+                    INTERACTIVE_MODE=0
+                    # Garantir que temos o package.ini
+                    if [[ ! -f "$CONFIG_DIR/package.ini" ]]; then
+                        download_package_ini
+                    fi
+                    parse_package_ini
+                    install_single_tool "$1"
+                    exit $?
+                else
+                    error "Nome da ferramenta necessário para -i/--install"
+                    exit 1
+                fi
+                ;;
+            -u|--update)
+                INTERACTIVE_MODE=0
+                info "Atualizando todas as ferramentas instaladas..."
+                menu_update_tools
+                exit 0
+                ;;
+            *)
+                warning "Argumento desconhecido: $1"
+                shift
+                ;;
+        esac
+    done
+    
+    # Modo não-interativo
+    if [[ $INTERACTIVE_MODE -eq 0 ]]; then
+        info "Executando em modo não-interativo"
+        
+        # Verificar e instalar dependências se necessário
+        if [[ ! -f "$DEPS_LOCK" ]] || [[ $FORCE_UPDATE -eq 1 ]]; then
+            install_core_dependencies
+            install_vendor_tools
+            touch "$DEPS_LOCK"
         fi
-      break
-      done
-      ;;
-    3)
-      analize_dependencies
-      show_result
-      show_menu
-      ;;
-    4)
-      system_upgrade
-      show_result
-      show_menu
-      ;;
-    5)
-      usage
-      show_result
-      show_menu
-      ;;
-    6)
-      exit 0
-      ;;
-    *)
-      echo -e "\n\033[1;31mInvalid option. Please choose a valid option.\033[0m"
-      show_menu
-      ;;
-  esac
-}
-
-# Define the function to display the verification result
-show_result() {
-  case $user_option in
-    1) echo -e "\n\033[1;32mInstallation completed successfully!\033[0m" ;;
-    2) echo -e "\n\033[1;32mDependencies checked successfully!\033[0m" ;;
-    3) echo -e "\n\033[1;32mPackages verified successfully!\033[0m" ;;
-  esac
-
-  # Ask the user if he wants to return to the main menu or end the script
-  echo
-  read -r -p "Do you want to return to the main menu or end the script? (y/n) " user_response
-
-  case $user_response in
-    y | Y) ;;
-    n | N) exit 0 ;;
-    *) echo -e "\n\033[1;31mInvalid option. Please choose a valid option.\033[0m" ;;
-  esac
-}
-
-in_array() {
-  local needle=$1 haystack
-  printf -v haystack '%s|' "${@:2}"
-  [[ "$needle" == @(${haystack%|}) ]]
-}
-
-system_update() {
-  if [[ ! $is_updated ]]; then
-    apt update -y -qq && is_updated=1
-  fi
-}
-export -f system_update
-
-system_upgrade() {
-  print_message 'Updating system'
-  apt -y upgrade -qq <<<'SYSTEM_UPGRADE'
-  apt -y update
-  apt -y upgrade -qq
-  apt -y full-upgrade -qq
-  apt -y dist-upgrade -qq
-  apt -f install -qq
-  apt --fix-broken install -y
-  dpkg --configure -a >/dev/null 2>&1
-  apt -y autoremove -qq
-  apt -y autoclean -qq
-}
-
-check_dependencies() {
-  (
-    srcdir="$srcdir/DonatoReis/Secbuild/vendor"
-    git_install 'https://github.com/NRZCode/progressbar' >/dev/null 2>&1
-    git_install 'https://github.com/NRZCode/bash-ini-parser' >/dev/null 2>&1
-  )
-  source "$workdir/vendor/NRZCode/bash-ini-parser/bash-ini-parser"
-}
-
-check_inifile() {
-  if [[ ! -r "$inifile" ]]; then
-    [[ -r "$workdir/package-dist.ini" ]] &&
-      cp "$workdir"/package{-dist,}.ini ||
-      wget -qO "$workdir/package.ini" https://github.com/DonatoReis/Secbuild/raw/master/package-dist.ini
-    echo "Error: Could not get file package.ini"
-    echo "Erro: $?"
-    exit 1
-  fi
-  [[ -r "$inifile" ]] || exit 1
-}
-
-init_install() {
-  export DEBIAN_FRONTEND=noninteractive
-  mkdir -p "$srcdir"
-  system_update
-  if [[ $force_update == 1 ]]; then
-    apt -f install >/dev/null 2>&1
-    apt --fix-broken install -y >/dev/null 2>&1
-    dpkg --configure -a >/dev/null 2>&1
-    rm -f "$HOME"/.local/._first_install.lock
-  fi
-  # REQUIREMENTS
-  print_message 'Complete tool to install and configure various tools for pentesting.'
-  printf "\n${CBold}${CFGWhite}◖»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»»${CReset}\n\n"
-  if [[ ! -f $HOME/.local/._first_install.lock ]]; then
-    packages='python3-pip apt-transport-https curl libgtk-4-dev libgdk-pixbuf-2.0-dev libcurl4-openssl-dev libssl-dev jq ruby-full libcurl4-openssl-dev ruby libxml2 libxml2-dev libxslt1-dev ruby-dev dkms build-essential libgmp-dev hcxdumptool zlib1g-dev perl zsh fonts-powerline libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl libparallel-forkmanager-perl libredis-perl libalgorithm-combinatorics-perl gem git cvs subversion bzr mercurial libssl-dev libffi-dev python-dev-is-python3 ruby-ffi-yajl libldns-dev rename docker.io parsero apache2 ssh tor privoxy proxychains4 aptitude synaptic lolcat yad dialog golang-go graphviz virtualenv reaver bats openssl cargo cmake'
-    url='https://go.dev/dl/go1.22.5.linux-amd64.tar.gz'
-    wget -O "/tmp/${url##*/}" "$url" >/dev/null 2>&1
-    rm -rf /usr/local/go >/dev/null 2>&1
-    tar -C /usr/local -xzf "/tmp/${url##*/}" >/dev/null 2>&1
-    ln -sf /usr/local/go/bin/go /usr/local/bin/go >/dev/null 2>&1
-    case $distro in
-    Ubuntu)
-      packages+=' chromium-browser whois'
-      ;;
-    Kali)
-      apt -y -qq install kali-desktop-gnome >/dev/null 2>&1
-      packages+=' hcxtools amass joomscan uniscan metagoofil gospider zmap crackmapexec arjun dnsgen s3scanner '
-      ;;
-    esac
-    system_upgrade
-    apt install -y -qq $packages >/dev/null 2>&1 | progressbar -s normal -m "Installing packages"
-    print_message "Installed packages."
-    echo
-
-    pip3 install --upgrade pip osrframework py-altdns==1.0.2 requests maigret wfuzz holehe twint droopescan uro arjun dnsgen s3scanner emailfinder pipx one-lin3r win_unicode_console aiodnsbrute webscreenshot dnspython netaddr git-dumper >/dev/null 2>&1 | progressbar -s normal -m "Updating the system"
-    print_message "Updated systems."
-    echo
-
-    gem install typhoeus opt_parse_validator blunder wpscan --silent | progressbar -s normal -m "Setting up environment"
-    print_message "Environment configured."
-    echo
-
-    cargo install ppfuzz --quiet >/dev/null 2>&1 | progressbar -s normal -m "Reviewing packages"
-    print_message "Revised packages."
-    mkdir -p "$HOME/.local"
-    >"$HOME"/.local/._first_install.lock
-  fi
-}
-
-get_distro() {
-  if type -t lsb_release >/dev/null 2>&1; then
-    distro=$(lsb_release -is)
-  elif [[ -f /etc/os-release ||
-    -f /usr/lib/os-release ||
-    -f /etc/openwrt_release ||
-    -f /etc/lsb-release ]]; then
-    for file in /usr/lib/os-release /etc/{os-,openwrt_,lsb-}release; do
-      source "$file" && break
-    done
-    distro="${NAME:-${DISTRIB_ID}} ${VERSION_ID:-${DISTRIB_RELEASE}}"
-  fi
-}
-
-progressbar() {
-  local progressbar="$workdir/vendor/NRZCode/progressbar/ProgressBar.sh"
-  [[ -x "$progressbar" && -z $APP_DEBUG ]] && $progressbar "$@" || cat
-}
-
-cfg_listsections() {
-  local file=$1
-  grep -oP '(?<=^\[)[^]]+' "$file"
-}
-
-read_package_ini() {
-  local inifile="$1"
-  local sec url script post_install
-  declare -A tools
-
-  cfg_parser "$inifile"
-
-  while read sec; do
-    unset url script depends post_install
-    cfg_section_$sec 2>&-
-    tools[${sec,,}]="$url|$script|$depends|$post_install"
-  done < <(cfg_listsections "$inifile")
-
-  # Read tools from package-dist.ini file
-  while read -r line; do
-    if [[ $line =~ ^\[([a-zA-Z0-9_-]+)\]$ ]]; then
-      tool="${BASH_REMATCH[1]}"
-      tools["$tool"]=1
+        
+        # Baixar e processar package.ini
+        download_package_ini
+        parse_package_ini
+        
+        # Se não foi especificada ação, instalar tudo
+        if [[ ${#INSTALLED_TOOLS[@]} -eq 0 && ${#FAILED_TOOLS[@]} -eq 0 ]]; then
+            install_all_tools
+        fi
+        
+        exit 0
     fi
-  done < "$inifile"
-
-  echo "${!tools[@]}"
+    
+    # Modo interativo
+    print_banner
+    info "Iniciando SecBuild v$SCRIPT_VERSION"
+    
+    # Verificar e instalar dependências se necessário
+    if [[ ! -f "$DEPS_LOCK" ]] || [[ $FORCE_UPDATE -eq 1 ]]; then
+        install_core_dependencies
+        install_vendor_tools
+        touch "$DEPS_LOCK"
+    fi
+    
+    # Baixar e processar package.ini
+    if [[ ! -f "$CONFIG_DIR/package.ini" ]]; then
+        download_package_ini
+    fi
+    parse_package_ini
+    
+    # Mostrar menu principal
+    show_main_menu
 }
 
-git_install() {
-  local repo=${1%%+(.git|/)}
-  local app=$2
-  local cmd=$3
-  if [[ $repo ]]; then
-    : "${repo%/*}"
-    local vendor=${_##*/}
-    export installdir="$srcdir/$vendor/${repo##*/}"
-    if [[ -d "$installdir/.git" ]]; then
-      git -C "$installdir" pull $GIT_OPT --all >/dev/null 2>&1
-    elif [[ ! -d "$installdir" ]]; then
-      git clone $GIT_OPT "$repo" "$installdir" >/dev/null 2>&1
-    fi | progressbar -s normal -m "${repo##*/}: Cloning repository"
-    if [[ $app ]]; then
-      [[ -f "$installdir/$app" ]] && chmod +x "$installdir/$app"
-      bin="$bindir/${app##*/}"
-      ln -sf "$installdir/$app" "$bin"
-      ln -sf "$installdir/$app" "${bin%.*}"
-    fi
-    if [[ -r "$installdir/requirements.txt" ]]; then
-      result=$(
-        cd "$installdir"
-        pip3 install -q -r requirements.txt 2>>$logerr >>$logfile
-      ) | progressbar -s fast -m "${repo##*/}: Python requirements"
-    fi
-    if [[ -r "$installdir/setup.py" ]]; then
-      result=$(
-        cd "$installdir"
-        python3 setup.py -q install 2>>$logerr >>$logfile
-      ) | progressbar -s fast -m "${repo##*/}: Installing setup.py"
-    fi
-  fi
+show_usage() {
+    cat <<EOF
+${CYAN}SecBuild v$SCRIPT_VERSION${RESET}
+${BLUE}Advanced Security Tools Installer for Kali/Ubuntu${RESET}
+
+${GREEN}Uso:${RESET}
+  sudo $SCRIPT_NAME [OPÇÕES]
+
+${GREEN}Opções:${RESET}
+  -h, --help          Mostrar esta ajuda
+  -v, --verbose       Modo verboso (debug)
+  -f, --force         Forçar atualização de dependências
+  -s, --silent        Modo silencioso (não-interativo)
+  -l, --list          Listar ferramentas disponíveis
+  -i, --install TOOL  Instalar ferramenta específica
+  -u, --update        Atualizar todas as ferramentas instaladas
+
+${GREEN}Exemplos:${RESET}
+  sudo $SCRIPT_NAME                    # Modo interativo
+  sudo $SCRIPT_NAME -i nmap            # Instalar ferramenta específica
+  sudo $SCRIPT_NAME -l                 # Listar ferramentas
+  sudo $SCRIPT_NAME -u                 # Atualizar ferramentas
+  sudo $SCRIPT_NAME -f -s              # Reinstalação forçada silenciosa
+
+${GREEN}Diretórios:${RESET}
+  Trabalho:  $WORK_DIR
+  Fontes:    $SRC_DIR
+  Binários:  $BIN_DIR
+  Logs:      $LOG_DIR
+
+${GREEN}Compatibilidade:${RESET}
+  • Kali Linux (todas as versões)
+  • Ubuntu 20.04+
+  • Debian 10+
+
+${CYAN}Mais informações:${RESET}
+  https://github.com/DonatoReis/Secbuild
+
+EOF
 }
 
-checklist_report() {
-  CFGBRed=$'\e[91m'
-  CFGBGreen=$'\e[92m'
-  if [[ $check_mode == 1 ]]; then
-    print_message 'Checklist from package.ini'
-    for tool in ${!tools[*]}; do
-      IFS='|' read url script depends post_install <<<"${tools[$tool]}"
-      if [[ $url || $post_install ]]; then
-        [[ "$depends$script" ]] || printf '[%s]\nscript=%s\ndepends=%s\n%s: \e[33mWARNING\e[m: is not possible verify installation: depends is not defined\n\n\n' "$tool" "$script" "$depends" "$tool"
-      fi
-    done
-  fi
-  print_message 'Checklist report from tools install'
-  for tool in "${!tools[@]}"; do
-    IFS='|' read -r url script depends post_install <<<"${tools[$tool]}"
-    if [[ $url || $post_install ]]; then
-      status=$'Fail'
-      if type -t $depends ${script##*/} >/dev/null; then
-        status='Ok'
-      fi
-      echo "${tool^} [$status]"
-    fi
-  done | column | sed "s/\[Ok\]/[${CFGBGreen}Ok${CReset}]/g;s/\[Fail\]/[${CFGBRed}Fail${CReset}]/g"
-}
+# ==============================================================================
+# EXECUÇÃO
+# ==============================================================================
 
-# Define the function to check dependencies
-analize_dependencies() {
-  dependencies=("apt" "dpkg" "git" "python3" "cargo")
-
-  for dependency in "${dependencies[@]}"; do
-    if ! apt install -y -f "$dependency" >/dev/null 2>&1; then
-      echo -e "\nError: $dependency is not installed. Please install it using the command 'apt install $dependency'"
-      echo "Installation failed. Please try again."
-      exit 1
-    fi
-  done
-}
-
-export -f init_install analize_dependencies system_upgrade system_update
-
-shopt -s extglob
-dirname=${BASH_SOURCE%/*}
-basename=${0##*/}
-
-export srcdir=${srcdir:-/usr/local}
-export bindir=${bindir:-$srcdir/bin}
-export GOBIN=$bindir GOPATH=$bindir
-workdir="$srcdir/DonatoReis/Secbuild"
-logfile="$workdir/${basename%.*}.log"
-logerr="$workdir/${basename%.*}.err"
-inifile="$workdir/package.ini"
-GIT_OPT='-q'
-[[ $APP_DEBUG ]] && GIT_OPT=
-
-load_ansi_colors
-while [[ $1 ]]; do
-  case $1 in
-  -h | --help | help)
-    usage
-    echo -e "${CBold}${CFGYellow}Help:${CReset}"
-    printf '%s\n' "\n${CFGWhite}Usage: ./secbuild.sh [-f] [-l] [tool] [-h]${CReset}"
-    echo -e "${CFGWhite}{options}:${CReset}"
-    echo -e "${CFGWhite}  -h, --help         Show this help${CReset}"
-    echo -e "${CFGWhite}  -v, --version      Show the script version${CReset}"
-    echo -e "${CFGWhite}  -f, --force-update Force update dependencies${CReset}"
-    echo -e "${CFGWhite}  -l, --list         List available security tools${CReset}"
-    echo -e "${CFGWhite}  -c, --check        Check if security tools are installed${CReset}"
-    exit 0
-    ;;
-  -v | --version)
-    echo -e "${CBold}${CFGYellow}Version:${CReset} ${version}"
-    exit 0
-    ;;
-  -f | --force-update)
-    force_update=1
-    shift
-    ;;
-  -l | --list)
-    [[ -f "$inifile" ]] && pkgs=$(grep -oP '(?<=^\[)[^]]+' "$inifile")
-    echo -e "${CBold}${CFGYellow}Available Security Tools:${CReset}"
-    echo -e "${CFGWhite}${pkgs}${CReset}"
-    exit 0
-    ;;
-  -c | --check)
-    check_mode=1
-    shift
-    ;;
-  *)
-    packages+=("$1")
-    shift
-    ;;
-  esac
-done
-
-if [[ 0 != "$EUID" ]]; then
-  echo -e "${CBold}${CFGRed}Erro:${CReset} You need to run this script as root!"
-  echo -e "${CFGWhite}Used: sudo./$basename${CReset}"
-  exit 1
+# Executar apenas se não estiver sendo sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
 fi
-
-get_distro
-check_dependencies
-declare -A tools
-check_inifile
-read_package_ini
-
-selection="${packages[*]}"
-if [[ ${#packages[@]} == 0 ]]; then
-  selection="${!tools[*]}"
-fi
-
-show_menu
-
-checklist_report
