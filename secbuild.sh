@@ -8,7 +8,7 @@
 # Compatibility: Kali Linux, Ubuntu 20.04+
 ################################################################################
 
-set -euo pipefail  # Modo seguro: falha em erros, variáveis não definidas e pipes
+set -uo pipefail  # Modo seguro: falha em erros, variáveis não definidas e pipes
 IFS=$'\n\t'        # Separador de campo seguro
 
 # ==============================================================================
@@ -168,30 +168,118 @@ EOF
 }
 
 # Barra de progresso corrigida
-show_progress() {
-    local current="$1"
-    local total="$2"
-    local task="${3:-}"
-    
-    # Previne divisão por zero
-    (( total == 0 )) && total=1
-    
-    local percent=$(( current * 100 / total ))
-    (( percent > 100 )) && percent=100
-    
-    local filled=$(( percent / 2 ))
-    local empty=$(( 50 - filled ))
-    
-    local bar_fill bar_empty
-    printf -v bar_fill  '%*s' "$filled" ''
-    printf -v bar_empty '%*s' "$empty"  ''
-    
-    bar_fill=${bar_fill// /█}
-    bar_empty=${bar_empty// /░}
-    
-    printf "\r${CYAN}[%3d%%]${RESET} [${GREEN}%s${RESET}%s] %s" \
-           "$percent" "$bar_fill" "$bar_empty" "$task"
+# Função de spinner animado melhorada
+show_spinner() {
+    local pid=$1
+    local delay=0.1
+    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    echo -n " "
+    while ps -p $pid > /dev/null 2>&1; do
+        local temp=${spinstr#?}
+        printf "\b%c" "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+    done
+    printf "\b \b"
 }
+
+# Função de progresso melhorada com cores e animação
+show_progress() {
+    local current=$1
+    local total=$2
+    local msg="${3:-Processing...}"
+    local width=50
+    
+    if [[ $total -eq 0 ]]; then
+        total=1
+    fi
+    
+    local percentage=$((current * 100 / total))
+    local filled=$((width * current / total))
+    
+    # Cores baseadas no progresso
+    local color=""
+    if [[ $percentage -lt 33 ]]; then
+        color="\033[0;31m"  # Vermelho
+    elif [[ $percentage -lt 66 ]]; then
+        color="\033[0;33m"  # Amarelo
+    else
+        color="\033[0;32m"  # Verde
+    fi
+    
+    # Limpar linha e construir barra
+    printf "\r\033[K"
+    printf "[%3d%%] " $percentage
+    printf "${color}["
+    
+    # Parte preenchida com animação
+    for ((i=0; i<filled; i++)); do
+        if [[ $i -eq $((filled-1)) ]] && [[ $filled -lt $width ]]; then
+            printf "▶"
+        else
+            printf "█"
+        fi
+    done
+    
+    # Parte vazia
+    for ((i=filled; i<width; i++)); do
+        printf "░"
+    done
+    
+    printf "]\033[0m ${msg:0:40}"
+}
+
+# Função melhorada para instalar ferramentas Go
+install_go_tool_with_retry() {
+    local tool_name="$1"
+    local package="$2"
+    local attempts=3
+    local count=0
+    
+    while [[ $count -lt $attempts ]]; do
+        count=$((count + 1))
+        debug "Tentativa $count de $attempts para instalar $tool_name"
+        
+        # Tentar diferentes métodos de instalação
+        if go install "${package}@latest" &>>"$LOG_FILE" 2>&1; then
+            return 0
+        elif go get -u "${package}" &>>"$LOG_FILE" 2>&1; then
+            return 0
+        elif GO111MODULE=on go get "${package}" &>>"$LOG_FILE" 2>&1; then
+            return 0
+        fi
+        
+        [[ $count -lt $attempts ]] && sleep 2
+    done
+    
+    return 1
+}
+
+# Melhorar tratamento de requirements Python
+install_requirements_safe() {
+    local req_file="$1"
+    local tool_name="$2"
+    
+    if [[ ! -f "$req_file" ]]; then
+        return 0
+    fi
+    
+    # Atualizar pip primeiro
+    python3 -m pip install --upgrade pip &>>"$LOG_FILE" 2>&1
+    
+    # Tentar instalar com diferentes estratégias
+    if python3 -m pip install -r "$req_file" --no-warn-script-location &>>"$LOG_FILE" 2>&1; then
+        return 0
+    elif python3 -m pip install -r "$req_file" --user --no-warn-script-location &>>"$LOG_FILE" 2>&1; then
+        return 0
+    elif python3 -m pip install -r "$req_file" --break-system-packages &>>"$LOG_FILE" 2>&1; then
+        return 0
+    fi
+    
+    return 1
+}
+
+
 
 spinner() {
     local pid="$1"
@@ -668,8 +756,9 @@ install_with_go() {
     # Adicionar @latest se não tiver versão especificada
     [[ "$go_package" != *@* ]] && go_package="${go_package}@latest"
     
-    if go install "$go_package" &>>"$LOG_FILE"; then
+    if install_go_tool_with_retry "$tool_name" "$go_package"; then
         debug "$tool_name instalado via Go"
+        validate_installation "$tool_name" "/usr/local/bin/$tool_name"
         return 0
     else
         error "Falha ao instalar $tool_name via Go ($go_package)"
@@ -1432,3 +1521,32 @@ EOF
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     main "$@"
 fi
+
+# Função para validar instalação de ferramenta
+validate_installation() {
+    local tool_name="$1"
+    local expected_path="${2:-/usr/local/bin/$tool_name}"
+    
+    # Verificar se o binário existe no caminho esperado
+    if [[ -f "$expected_path" ]] || command -v "$tool_name" &>/dev/null; then
+        return 0
+    fi
+    
+    # Verificar em caminhos comuns
+    local common_paths=(
+        "/usr/local/bin"
+        "$HOME/go/bin"
+        "/root/go/bin"
+        "$HOME/.local/bin"
+        "/opt/$tool_name"
+    )
+    
+    for path in "${common_paths[@]}"; do
+        if [[ -f "$path/$tool_name" ]]; then
+            # Criar link simbólico se encontrado
+            ln -sf "$path/$tool_name" "/usr/local/bin/$tool_name" 2>/dev/null && return 0
+        fi
+    done
+    
+    return 1
+}
