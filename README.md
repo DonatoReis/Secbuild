@@ -1,7 +1,7 @@
 # Secbuild
 
 <p align="center" dir="auto">
-  <a target="_blank" rel="noopener noreferrer" href="https://imgbb.com/"><img src="https://i.ibb.co/TmM7ZVx/secbuild-transformed.png" alt="secbuild-transformed" border="0" height="540" style="max-width: 100%;"></a>
+  <a target="_blank" rel="noopener noreferrer" href="https://imgbb.com/"><img src="https://i.ibb.co/RTQDVz15/upscalemedia-transformed.png" alt="secbuild-transformed" border="0" height="540" style="max-width: 100%;"></a>
   <br>
   <strong>Secbuild - An automation tool to install the most popular tools for bug bounty or pentesting</strong> 
   <br><br>
