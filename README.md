@@ -93,12 +93,6 @@ List1|List2|List3|List4|List5|List6|List7|List8
 secbuild
 ```
 
-### Mode terminal
-```sh
-curl -sL https://github.com/DonatoReis/Secbuild/raw/main/secbuild.sh | sudo bash
-
-```
-
 #### **Installation mode with git clone**
 ```sh
 git clone https://github.com/DonatoReis/Secbuild
