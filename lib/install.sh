@@ -116,8 +116,8 @@ get_latest_github_release() {
             local cached_version
             cached_version=$(cat "$cache_file" 2>/dev/null)
             if [[ -n "$cached_version" ]]; then
-                debug "Usando versão em cache para $repo_url: $cached_version"
-                echo "$cached_version"
+                debug "Using cached version for $repo_url: $cached_version"
+                echo "$cached_version" >&1
                 return 0
             fi
         fi
@@ -147,8 +147,8 @@ get_latest_github_release() {
         # Salvar no cache
         mkdir -p "$(dirname "$cache_file")"
         echo "$latest_release" > "$cache_file"
-        debug "Última release estável encontrada: $latest_release"
-        echo "$latest_release"
+        debug "Latest stable release found: $latest_release"
+        echo "$latest_release" >&1
         return 0
     fi
     
@@ -605,10 +605,12 @@ install_from_git() {
     
     if [[ "${USE_LATEST_RELEASE:-1}" -eq 1 ]] && [[ "$repo_url" =~ github\.com ]]; then
         debug "Searching for latest stable version for $tool_name..."
-        target_version=$(get_latest_github_release "$repo_url")
-        if [[ -n "$target_version" ]]; then
+        target_version=$(get_latest_github_release "$repo_url" 2>/dev/null | head -1)
+        # Validate that target_version is actually a version (starts with number or 'v')
+        if [[ -n "$target_version" ]] && ([[ "$target_version" =~ ^[0-9] ]] || [[ "$target_version" =~ ^v[0-9] ]]); then
             info "Latest version found: $target_version"
         else
+            target_version=""
             debug "Could not get specific version, using default branch"
         fi
     fi
@@ -641,15 +643,22 @@ install_from_git() {
             # Verificar se já está na versão correta
             if [[ "$current_version" == "$target_version" ]] || \
                [[ "$(git -C "$install_path" rev-parse HEAD 2>/dev/null)" == "$(git -C "$install_path" rev-parse "$target_version" 2>/dev/null)" ]]; then
-                debug "Já está na versão $target_version"
+                debug "Already at version $target_version"
                 save_to_cache "$cache_key" "$(date +%s)"
             else
-                # Fazer checkout da versão específica
-                if git -C "$install_path" checkout -q "$target_version" >>"$LOG_FILE" 2>&1; then
-                    debug "Atualizado para versão $target_version"
-                    save_to_cache "$cache_key" "$(date +%s)"
-                else
-                    warning "Falha ao fazer checkout da versão $target_version, usando branch padrão"
+                # Fazer checkout da versão específica (tentar múltiplos formatos)
+                local checkout_success=0
+                for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
+                    if git -C "$install_path" checkout -q "$checkout_method" >>"$LOG_FILE" 2>&1; then
+                        debug "Updated to version $target_version"
+                        save_to_cache "$cache_key" "$(date +%s)"
+                        checkout_success=1
+                        break
+                    fi
+                done
+                
+                if [[ $checkout_success -eq 0 ]]; then
+                    warning "Failed to checkout version $target_version, using default branch"
                     git -C "$install_path" pull -q --ff-only >>"$LOG_FILE" 2>&1 || true
                 fi
             fi
@@ -684,27 +693,41 @@ install_from_git() {
                 # Buscar tags para ter acesso à versão específica
                 git -C "$install_path" fetch --tags --quiet >>"$LOG_FILE" 2>&1 || true
                 
-                # Tentar fazer checkout da versão
-                if git -C "$install_path" checkout -q "$target_version" >>"$LOG_FILE" 2>&1; then
-                    debug "Repository cloned: $repo_name" " (version $target_version)"
-                    
-                    # NEW IMPROVEMENT: Verify cloned repository integrity
-                    verify_git_repository_integrity "$install_path" "$tool_name" "$target_version"
-                    
-                    save_to_cache "$cache_key" "$(date +%s)"
-                else
+                # Tentar fazer checkout da versão (tentar múltiplos formatos)
+                local checkout_success=0
+                for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
+                    if git -C "$install_path" checkout -q "$checkout_method" >>"$LOG_FILE" 2>&1; then
+                        debug "Repository cloned: $repo_name (version $target_version)"
+                        
+                        # NEW IMPROVEMENT: Verify cloned repository integrity
+                        verify_git_repository_integrity "$install_path" "$tool_name" "$target_version"
+                        
+                        save_to_cache "$cache_key" "$(date +%s)"
+                        checkout_success=1
+                        break
+                    fi
+                done
+                
+                if [[ $checkout_success -eq 0 ]]; then
                     # If fails, try full clone with tags
                     warning "Could not checkout version $target_version, cloning full repository..."
                     rm -rf "$install_path"
                     if git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
-                        if git -C "$install_path" checkout -q "$target_version" >>"$LOG_FILE" 2>&1; then
-                            debug "Repository cloned: $repo_name" " (version $target_version)"
-                            
-                            # Verify integrity
-                            verify_git_repository_integrity "$install_path" "$tool_name" "$target_version"
-                            
-                            save_to_cache "$cache_key" "$(date +%s)"
-                        else
+                        checkout_success=0
+                        for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
+                            if git -C "$install_path" checkout -q "$checkout_method" >>"$LOG_FILE" 2>&1; then
+                                debug "Repository cloned: $repo_name (version $target_version)"
+                                
+                                # Verify integrity
+                                verify_git_repository_integrity "$install_path" "$tool_name" "$target_version"
+                                
+                                save_to_cache "$cache_key" "$(date +%s)"
+                                checkout_success=1
+                                break
+                            fi
+                        done
+                        
+                        if [[ $checkout_success -eq 0 ]]; then
                             warning "Failed to checkout version $target_version, using default branch"
                             save_to_cache "$cache_key" "$(date +%s)"
                         fi
@@ -718,7 +741,14 @@ install_from_git() {
                 warning "Shallow clone failed, trying full clone..."
                 if git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
                     if [[ -n "$target_version" ]]; then
-                        git -C "$install_path" checkout -q "$target_version" >>"$LOG_FILE" 2>&1 || true
+                        local checkout_success=0
+                        for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
+                            if git -C "$install_path" checkout -q "$checkout_method" >>"$LOG_FILE" 2>&1; then
+                                checkout_success=1
+                                break
+                            fi
+                        done
+                        [[ $checkout_success -eq 0 ]] && debug "Could not checkout version $target_version, using default branch"
                     fi
                     debug "Repository cloned: $repo_name"
                     save_to_cache "$cache_key" "$(date +%s)"
@@ -806,7 +836,10 @@ install_with_go() {
     export GOPATH="$SRC_DIR/go"
     export GOBIN="$BIN_DIR"
     
-    [[ "$go_package" != *@* ]] && go_package="${go_package}@latest"
+    # Only add @latest if package doesn't already have a version specifier
+    if [[ "$go_package" != *@* ]]; then
+        go_package="${go_package}@latest"
+    fi
     
     if install_go_tool_with_retry "$tool_name" "$go_package"; then
         debug "$tool_name installed via Go"
@@ -1287,8 +1320,24 @@ install_single_tool() {
     
     if [[ -n "$post_install" ]]; then
         if [[ "$post_install" =~ go[[:space:]]install ]]; then
+            # Extract Go package from post_install command
+            # Remove "go install" prefix
             local go_pkg="${post_install#*go install }"
-            go_pkg="${go_pkg%% *}"
+            # Remove leading/trailing whitespace
+            go_pkg=$(echo "$go_pkg" | xargs)
+            # Remove common Go flags (-v, -x, -race, etc.) from the beginning
+            while [[ "$go_pkg" =~ ^-[a-zA-Z]+[[:space:]] ]]; do
+                go_pkg="${go_pkg#*-[a-zA-Z]*[[:space:]]}"
+                go_pkg=$(echo "$go_pkg" | xargs)
+            done
+            # Extract the package path (everything until space or end)
+            # Package paths typically don't have spaces, but handle @version
+            go_pkg=$(echo "$go_pkg" | awk '{print $1}')
+            debug "Extracted Go package: $go_pkg"
+            if [[ -z "$go_pkg" ]] || [[ "$go_pkg" =~ ^- ]]; then
+                error "Failed to extract Go package from: $post_install"
+                return 1
+            fi
             install_with_go "$go_pkg" "$tool_name" && install_success=1
         elif [[ "$post_install" =~ cargo[[:space:]]+build ]]; then
             # Detect cargo build - install from Git URL if available
@@ -1365,7 +1414,7 @@ install_all_tools() {
         local current=0
         for tool in "${tools_array[@]}"; do
             ((current++))
-            show_progress "$current" "$total" "$(t 'install.progress' "$tool")"
+            show_progress "$current" "$total" "Processing $tool..."
             install_single_tool "$tool" || true
         done
         echo
