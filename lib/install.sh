@@ -834,10 +834,29 @@ install_with_cargo() {
     fi
     
     # Check if cargo is installed, try to install if not
-    # Add common cargo paths to PATH
-    export PATH="$HOME/.cargo/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+    # Add common cargo paths to PATH (for both regular user and root)
+    export PATH="$HOME/.cargo/bin:/root/.cargo/bin:/usr/local/cargo/bin:/home/$SUDO_USER/.cargo/bin:$PATH"
     
-    if ! command -v cargo &>/dev/null; then
+    # First, try to find cargo in current PATH
+    local cargo_found=0
+    if command -v cargo &>/dev/null; then
+        cargo_found=1
+        debug "Cargo found in PATH: $(command -v cargo)"
+    fi
+    
+    # If not found, search in common locations
+    if [[ $cargo_found -eq 0 ]]; then
+        for cargo_path in "/root/.cargo/bin/cargo" "$HOME/.cargo/bin/cargo" "/home/$SUDO_USER/.cargo/bin/cargo" "/usr/local/bin/cargo" "/usr/bin/cargo"; do
+            if [[ -x "$cargo_path" ]]; then
+                export PATH="$(dirname "$cargo_path"):$PATH"
+                cargo_found=1
+                debug "Cargo found at: $cargo_path"
+                break
+            fi
+        done
+    fi
+    
+    if [[ $cargo_found -eq 0 ]]; then
         warning "Cargo (Rust) is not installed. Attempting to install..."
         apt_update_once
         
@@ -939,37 +958,75 @@ install_with_cargo() {
     # Build with cargo
     info "Building $tool_name with Cargo (this may take a while)..."
     
-    # Use CARGO_BIN if set, otherwise use cargo from PATH
-    local cargo_cmd="${CARGO_BIN:-cargo}"
-    if ! command -v "$cargo_cmd" &>/dev/null && [[ -n "${CARGO_BIN:-}" ]]; then
-        cargo_cmd="$CARGO_BIN"
+    # Get the original user who ran sudo (if applicable)
+    local original_user="${SUDO_USER:-$USER}"
+    local original_home
+    if [[ -n "$original_user" ]] && [[ "$original_user" != "root" ]]; then
+        original_home=$(getent passwd "$original_user" 2>/dev/null | cut -d: -f6)
+    else
+        original_home="$HOME"
     fi
     
-    # Final check - if still not found, try common paths
-    if ! command -v "$cargo_cmd" &>/dev/null && [[ ! -x "$cargo_cmd" ]]; then
-        for cargo_path in "$HOME/.cargo/bin/cargo" "/root/.cargo/bin/cargo" "/usr/bin/cargo" "/usr/local/bin/cargo"; do
+    # Ensure PATH includes common cargo locations (for both root and original user)
+    export PATH="$original_home/.cargo/bin:$HOME/.cargo/bin:/root/.cargo/bin:/usr/local/cargo/bin:/usr/bin:/usr/local/bin:$PATH"
+    
+    # Find cargo - try multiple methods
+    local cargo_cmd=""
+    
+    # Method 1: Try command -v (uses PATH)
+    if command -v cargo &>/dev/null; then
+        cargo_cmd=$(command -v cargo)
+        debug "Cargo found via PATH: $cargo_cmd"
+    fi
+    
+    # Method 2: Try common paths directly (including original user's home)
+    if [[ -z "$cargo_cmd" ]]; then
+        for cargo_path in "$original_home/.cargo/bin/cargo" "/root/.cargo/bin/cargo" "$HOME/.cargo/bin/cargo" "/usr/local/bin/cargo" "/usr/bin/cargo"; do
             if [[ -x "$cargo_path" ]]; then
                 cargo_cmd="$cargo_path"
+                debug "Cargo found at: $cargo_cmd"
                 break
             fi
         done
     fi
     
-    if ! command -v "$cargo_cmd" &>/dev/null && [[ ! -x "$cargo_cmd" ]]; then
+    # Method 3: Use CARGO_BIN if set
+    if [[ -z "$cargo_cmd" ]] && [[ -n "${CARGO_BIN:-}" ]]; then
+        cargo_cmd="$CARGO_BIN"
+        debug "Using CARGO_BIN: $cargo_cmd"
+    fi
+    
+    # Final verification
+    if [[ -z "$cargo_cmd" ]] || [[ ! -x "$cargo_cmd" ]]; then
         error "Cargo command not found. Please install Rust: https://rustup.rs/"
+        debug "Searched in: $original_home/.cargo/bin, $HOME/.cargo/bin, /root/.cargo/bin, /usr/bin, /usr/local/bin"
+        debug "Original user: $original_user, Home: $original_home"
         rm -rf "$temp_dir"
         return 1
     fi
     
-    local build_cmd="$cargo_cmd build --release"
+    # Verify cargo works
+    if ! "$cargo_cmd" --version &>>"$LOG_FILE" 2>&1; then
+        error "Cargo found but not working: $cargo_cmd"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+    
+    local cargo_version
+    cargo_version=$("$cargo_cmd" --version 2>/dev/null | head -1)
+    debug "Using cargo: $cargo_cmd ($cargo_version)"
+    
+    # Build command - use array to properly handle arguments
+    local build_args=("build" "--release")
     
     # Check if we need to build a specific binary (for projects with multiple binaries)
     if "$cargo_cmd" metadata --no-deps --format-version 1 --manifest-path "$cargo_dir/Cargo.toml" 2>/dev/null | grep -q "\"$binary_name\""; then
-        build_cmd="$cargo_cmd build --release --bin $binary_name"
+        build_args+=("--bin" "$binary_name")
         debug "Building specific binary: $binary_name"
     fi
     
-    if (cd "$cargo_dir" && $build_cmd >>"$LOG_FILE" 2>&1); then
+    # Execute cargo build
+    if (cd "$cargo_dir" && "$cargo_cmd" "${build_args[@]}" >>"$LOG_FILE" 2>&1); then
         # Find the binary - try multiple strategies
         local built_binary=""
         
