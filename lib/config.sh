@@ -10,18 +10,28 @@ download_package_ini() {
     
     [[ $VERBOSE_MODE -eq 1 ]] && info "Downloading tools configuration file..."
     
-    # Fazer backup se existir
-    if [[ -f "$ini_file" ]]; then
+    # Force update if FORCE_UPDATE is set
+    if [[ ${FORCE_UPDATE:-0} -eq 1 ]] && [[ -f "$ini_file" ]]; then
         local backup_file="$BACKUP_DIR/package.ini.$(date +%Y%m%d_%H%M%S)"
         cp "$ini_file" "$backup_file" 2>/dev/null || true
-        debug "Backup criado: $backup_file"
+        debug "Backup created: $backup_file"
+        rm -f "$ini_file"
+    elif [[ -f "$ini_file" ]]; then
+        local backup_file="$BACKUP_DIR/package.ini.$(date +%Y%m%d_%H%M%S)"
+        cp "$ini_file" "$backup_file" 2>/dev/null || true
+        debug "Backup created: $backup_file"
     fi
     
     # First try to copy local file (always update if exists)
     if [[ -f "$SCRIPT_DIR/package-dist.ini" ]]; then
         # Always copy local file to ensure it's up to date
         # This ensures profiles and other updates are applied
-        cp "$SCRIPT_DIR/package-dist.ini" "$ini_file"
+        cp -f "$SCRIPT_DIR/package-dist.ini" "$ini_file" 2>/dev/null || {
+            sudo cp -f "$SCRIPT_DIR/package-dist.ini" "$ini_file" 2>/dev/null || {
+                error "Failed to copy package-dist.ini to $ini_file"
+                return 1
+            }
+        }
         [[ $VERBOSE_MODE -eq 1 ]] && success "Configuration file copied locally"
     else
         # Download from repository with retry

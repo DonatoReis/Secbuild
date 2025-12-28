@@ -833,9 +833,66 @@ install_with_cargo() {
         return 0
     fi
     
-    # Check if cargo is installed
+    # Check if cargo is installed, try to install if not
+    # Add common cargo paths to PATH
+    export PATH="$HOME/.cargo/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+    
     if ! command -v cargo &>/dev/null; then
-        error "Cargo (Rust) is not installed. Please install Rust first."
+        warning "Cargo (Rust) is not installed. Attempting to install..."
+        apt_update_once
+        
+        # Try to install rust via rustup (recommended) or apt
+        if command -v curl &>/dev/null; then
+            info "Installing Rust via rustup (recommended method)..."
+            # Determine home directory (could be /root when running with sudo)
+            local rust_home="${HOME:-/root}"
+            
+            if curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y >>"$LOG_FILE" 2>&1; then
+                # Source cargo path for current and root user
+                export PATH="$rust_home/.cargo/bin:/root/.cargo/bin:$PATH"
+                
+                # Verify cargo is now available
+                if "$rust_home/.cargo/bin/cargo" --version &>/dev/null || command -v cargo &>/dev/null; then
+                    success "Rust installed successfully via rustup"
+                    # Use full path if command -v still doesn't find it
+                    if ! command -v cargo &>/dev/null; then
+                        export CARGO_BIN="$rust_home/.cargo/bin/cargo"
+                    fi
+                else
+                    error "Rust installation completed but cargo not found in PATH"
+                    return 1
+                fi
+            else
+                warning "rustup installation failed, trying apt..."
+            fi
+        fi
+        
+        # Fallback to apt installation
+        if ! command -v cargo &>/dev/null && [[ -z "${CARGO_BIN:-}" ]]; then
+            info "Installing Rust via apt..."
+            if dry_run_exec "apt-get install -y -qq rustc cargo &>>\"$LOG_FILE\""; then
+                export PATH="/usr/bin:/usr/local/bin:$PATH"
+                if command -v cargo &>/dev/null; then
+                    success "Rust installed successfully via apt"
+                else
+                    error "Rust installation completed but cargo not found. Please install Rust manually."
+                    return 1
+                fi
+            else
+                error "Failed to install Rust. Please install Rust manually: https://rustup.rs/"
+                return 1
+            fi
+        fi
+    fi
+    
+    # Use CARGO_BIN if set, otherwise use cargo from PATH
+    local cargo_cmd="${CARGO_BIN:-cargo}"
+    if ! command -v "$cargo_cmd" &>/dev/null && [[ -n "${CARGO_BIN:-}" ]]; then
+        cargo_cmd="$CARGO_BIN"
+    fi
+    
+    if ! command -v "$cargo_cmd" &>/dev/null && [[ ! -x "$cargo_cmd" ]]; then
+        error "Cargo command not found: $cargo_cmd"
         return 1
     fi
     
@@ -881,11 +938,34 @@ install_with_cargo() {
     
     # Build with cargo
     info "Building $tool_name with Cargo (this may take a while)..."
-    local build_cmd="cargo build --release"
+    
+    # Use CARGO_BIN if set, otherwise use cargo from PATH
+    local cargo_cmd="${CARGO_BIN:-cargo}"
+    if ! command -v "$cargo_cmd" &>/dev/null && [[ -n "${CARGO_BIN:-}" ]]; then
+        cargo_cmd="$CARGO_BIN"
+    fi
+    
+    # Final check - if still not found, try common paths
+    if ! command -v "$cargo_cmd" &>/dev/null && [[ ! -x "$cargo_cmd" ]]; then
+        for cargo_path in "$HOME/.cargo/bin/cargo" "/root/.cargo/bin/cargo" "/usr/bin/cargo" "/usr/local/bin/cargo"; do
+            if [[ -x "$cargo_path" ]]; then
+                cargo_cmd="$cargo_path"
+                break
+            fi
+        done
+    fi
+    
+    if ! command -v "$cargo_cmd" &>/dev/null && [[ ! -x "$cargo_cmd" ]]; then
+        error "Cargo command not found. Please install Rust: https://rustup.rs/"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+    
+    local build_cmd="$cargo_cmd build --release"
     
     # Check if we need to build a specific binary (for projects with multiple binaries)
-    if cargo metadata --no-deps --format-version 1 --manifest-path "$cargo_dir/Cargo.toml" 2>/dev/null | grep -q "\"$binary_name\""; then
-        build_cmd="cargo build --release --bin $binary_name"
+    if "$cargo_cmd" metadata --no-deps --format-version 1 --manifest-path "$cargo_dir/Cargo.toml" 2>/dev/null | grep -q "\"$binary_name\""; then
+        build_cmd="$cargo_cmd build --release --bin $binary_name"
         debug "Building specific binary: $binary_name"
     fi
     
@@ -1111,18 +1191,37 @@ install_single_tool() {
     if [[ -n "$depends" ]]; then
         debug "Installing dependencies: $depends"
         apt_update_once
-        if ! dry_run_exec "apt-get install -y -qq $depends &>>\"$LOG_FILE\""; then
-            [[ $DRY_RUN -eq 0 ]] && warning "Failed to install $depends"
-        else
-            debug "$depends installed successfully"
+        
+        # Split dependencies by comma and install each
+        local deps_array
+        IFS=',' read -ra deps_array <<< "$depends"
+        local failed_deps=()
+        
+        for dep in "${deps_array[@]}"; do
+            # Trim whitespace
+            dep="${dep#"${dep%%[![:space:]]*}"}"
+            dep="${dep%"${dep##*[![:space:]]}"}"
+            
+            if [[ -n "$dep" ]]; then
+                if ! dry_run_exec "apt-get install -y -qq $dep &>>\"$LOG_FILE\""; then
+                    [[ $DRY_RUN -eq 0 ]] && failed_deps+=("$dep")
+                else
+                    debug "$dep installed successfully"
+                fi
+            fi
+        done
+        
+        if [[ ${#failed_deps[@]} -gt 0 ]]; then
+            warning "Failed to install some dependencies: ${failed_deps[*]}"
         fi
     fi
     
     # Install tool
     # Check if post_install is cargo build first (skip normal git install)
     local is_cargo_build=0
-    if [[ -n "$post_install" ]] && [[ "$post_install" =~ cargo[[:space:]]build ]]; then
+    if [[ -n "$post_install" ]] && [[ "$post_install" =~ cargo[[:space:]]+build ]]; then
         is_cargo_build=1
+        debug "Detected Cargo build for $tool_name"
     fi
     
     if [[ -n "$url" ]] && [[ $is_cargo_build -eq 0 ]]; then
@@ -1134,8 +1233,9 @@ install_single_tool() {
             local go_pkg="${post_install#*go install }"
             go_pkg="${go_pkg%% *}"
             install_with_go "$go_pkg" "$tool_name" && install_success=1
-        elif [[ "$post_install" =~ cargo[[:space:]]build ]]; then
+        elif [[ "$post_install" =~ cargo[[:space:]]+build ]]; then
             # Detect cargo build - install from Git URL if available
+            debug "Processing Cargo build for $tool_name"
             if [[ -n "$url" ]]; then
                 install_with_cargo "$url" "$tool_name" && install_success=1
             else
