@@ -23,7 +23,7 @@ is_cache_valid() {
     local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || stat -f %m "$cache_file" 2>/dev/null)))
     
     if [[ $cache_age -gt $CACHE_TTL ]]; then
-        debug "cache.expired" "$cache_key" "$cache_age"
+        debug "Cache expired for $cache_key (age: ${cache_age}s)"
         return 1
     fi
     
@@ -38,7 +38,7 @@ save_to_cache() {
     
     mkdir -p "$CACHE_DIR"
     echo "$content" > "$cache_file"
-    debug "cache.saved" "$cache_key"
+    debug "Content saved to cache: $cache_key"
 }
 
 # Obter do cache

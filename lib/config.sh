@@ -8,7 +8,7 @@
 download_package_ini() {
     local ini_file="$CONFIG_DIR/package.ini"
     
-    info "config.downloading"
+    [[ $VERBOSE_MODE -eq 1 ]] && info "Downloading tools configuration file..."
     
     # Fazer backup se existir
     if [[ -f "$ini_file" ]]; then
@@ -17,78 +17,78 @@ download_package_ini() {
         debug "Backup criado: $backup_file"
     fi
     
-    # Primeiro tentar copiar o arquivo local (sempre atualizar se existir)
+    # First try to copy local file (always update if exists)
     if [[ -f "$SCRIPT_DIR/package-dist.ini" ]]; then
-        # Sempre copiar o arquivo local para garantir que está atualizado
-        # Isso garante que perfis e outras atualizações sejam aplicadas
+        # Always copy local file to ensure it's up to date
+        # This ensures profiles and other updates are applied
         cp "$SCRIPT_DIR/package-dist.ini" "$ini_file"
-        success "config.copied"
+        [[ $VERBOSE_MODE -eq 1 ]] && success "Configuration file copied locally"
     else
-        # Baixar do repositório com retry
+        # Download from repository with retry
         local attempt=1
         while [[ $attempt -le $RETRY_COUNT ]]; do
             if wget -q -O "$ini_file" --timeout="$DOWNLOAD_TIMEOUT" "$PACKAGE_INI_URL"; then
-                success "config.downloaded"
+                [[ $VERBOSE_MODE -eq 1 ]] && success "Configuration file downloaded"
                 break
             else
-                warning "config.attempt" "$attempt" "$RETRY_COUNT"
+                warning "Attempt $attempt/$RETRY_COUNT failed"
                 ((attempt++))
                 [[ $attempt -le $RETRY_COUNT ]] && sleep "$RETRY_DELAY"
             fi
         done
         
         if [[ $attempt -gt $RETRY_COUNT ]]; then
-            error "config.failed" "$RETRY_COUNT"
+            error "Failed to download configuration file after $RETRY_COUNT attempts"
             return 1
         fi
     fi
     
     [[ -r "$ini_file" ]] || {
-        error "config.not_found"
+        error "Configuration file not found or not readable"
         return 1
     }
     
-    # Validar arquivo baixado (estrutura)
+    # Validate downloaded file (structure)
     if ! validate_package_ini "$ini_file"; then
-        error "config.invalid"
+        error "Invalid configuration file. Check errors above."
         return 1
     fi
     
-    # Verificar integridade básica (tamanho mínimo e estrutura)
+    # Check basic integrity (minimum size and structure)
     local file_size
     file_size=$(stat -f%z "$ini_file" 2>/dev/null || stat -c%s "$ini_file" 2>/dev/null || echo "0")
     
     if [[ $file_size -lt 100 ]]; then
-        error "Arquivo package.ini parece estar corrompido (muito pequeno: ${file_size} bytes)"
+        error "package.ini file appears to be corrupted (too small: ${file_size} bytes)"
         return 1
     fi
     
-    # Verificar se tem pelo menos uma seção válida
+    # Check if it has at least one valid section
     if ! grep -q "^\[" "$ini_file" 2>/dev/null; then
-        error "Arquivo package.ini não contém seções válidas"
+        error "package.ini file does not contain valid sections"
         return 1
     fi
     
-    debug "Integridade básica do package.ini verificada (${file_size} bytes)"
+    debug "Basic integrity of package.ini verified (${file_size} bytes)"
 }
 
 # Parse do package.ini
 parse_package_ini() {
     local ini_file="$CONFIG_DIR/package.ini"
     
-    info "config.processing"
+    [[ $VERBOSE_MODE -eq 1 ]] && info "Processing tools configuration..."
     
     if [[ ! -f "$ini_file" ]]; then
-        error "config.not_found_file"
+        error "package.ini file not found"
         return 1
     fi
     
-    # Limpar registro anterior
+    # Clear previous registry
     TOOLS_REGISTRY=()
     TOOLS_PROFILES=()
     PROFILE_TOOLS=()
     
-    # Parse manual do arquivo INI
+    # Manual parse of INI file
     local current_tool=""
     local url=""
     local script=""
@@ -96,39 +96,39 @@ parse_package_ini() {
     local post_install=""
     
     while IFS= read -r line; do
-        # Remove espaços em branco
+        # Remove whitespace
         line="${line#"${line%%[![:space:]]*}"}"
         line="${line%"${line##*[![:space:]]}"}"
         
-        # Pular linhas vazias e comentários (# ou ;)
+        # Skip empty lines and comments (# or ;)
         [[ -z "$line" ]] && continue
         [[ "$line" =~ ^[[:space:]]*[\#\;] ]] && continue
         
-        # Nova seção (ferramenta)
+        # New section (tool)
         if [[ "$line" =~ ^\[([^]]+)\]$ ]]; then
-            # Salvar ferramenta anterior se existir
+            # Save previous tool if exists
             if [[ -n "$current_tool" ]]; then
                 TOOLS_REGISTRY["$current_tool"]="$url|$script|$depends|$post_install"
-                debug "config.registered" "$current_tool"
+                debug "Tool registered: $current_tool"
             fi
             
-            # Iniciar nova ferramenta
-            current_tool="${BASH_REMATCH[1],,}"  # Converter para minúsculas
+            # Start new tool
+            current_tool="${BASH_REMATCH[1],,}"  # Convert to lowercase
             url=""
             script=""
             depends=""
             post_install=""
             
-        # Processar atributos (key=value ou key = value)
+        # Process attributes (key=value or key = value)
         elif [[ "$line" =~ ^([^=]+)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
             local key="${BASH_REMATCH[1]}"
             local value="${BASH_REMATCH[2]}"
             
-            # Remover espaços extras
+            # Remove extra spaces
             key="${key#"${key%%[![:space:]]*}"}"
             key="${key%"${key##*[![:space:]]}"}"
             
-            # Remover aspas se existirem
+            # Remove quotes if present
             value="${value#\'}"
             value="${value%\'}"
             value="${value#\"}"
@@ -140,7 +140,7 @@ parse_package_ini() {
                 depends) depends="$value" ;;
                 post_install) post_install="$value" ;;
                 profile) 
-                    # Processar perfis (separados por vírgula)
+                    # Process profiles (comma-separated)
                     local profile_value="$value"
                     IFS=',' read -ra profiles <<< "$profile_value"
                     for profile in "${profiles[@]}"; do
@@ -167,18 +167,18 @@ parse_package_ini() {
         fi
     done < "$ini_file"
     
-    # Salvar última ferramenta
+    # Save last tool
     if [[ -n "$current_tool" ]]; then
         TOOLS_REGISTRY["$current_tool"]="$url|$script|$depends|$post_install"
-        debug "config.registered" "$current_tool"
+        debug "Tool registered: $current_tool"
     fi
     
     local tool_count="${#TOOLS_REGISTRY[@]}"
-    success "config.processed" "$tool_count"
+    [[ $VERBOSE_MODE -eq 1 ]] && success "Configuration processed: $tool_count tools available"
     
-    # Debug: listar ferramentas carregadas
+    # Debug: list loaded tools
     if [[ $VERBOSE_MODE -eq 1 ]]; then
-        debug "config.loaded"
+        debug "Loaded tools:"
         for tool in "${!TOOLS_REGISTRY[@]}"; do
             debug "  - $tool"
         done
@@ -194,62 +194,62 @@ load_tools_config_yaml() {
     local yaml_file="$SCRIPT_DIR/tools_config.yaml"
     
     if [[ ! -f "$yaml_file" ]]; then
-        debug "tools_config.yaml não encontrado, pulando"
+        debug "tools_config.yaml Not found, jumping"
         return 0
     fi
     
-    info "Carregando configurações do tools_config.yaml..."
+    [[ $VERBOSE_MODE -eq 1 ]] && info "Loading configuration from tools_config.yaml..."
     
-    # Verificar se yq está disponível
+    # Check if yq is available
     if ! command -v yq &>/dev/null && ! command -v python3 &>/dev/null; then
-        warning "yq ou python3 não encontrado, pulando tools_config.yaml"
+        warning "yq or python3 not found, skipping tools_config.yaml"
         return 0
     fi
     
-    # Limpar arrays
+    # Clear arrays
     YAML_ESSENTIAL_PACKAGES=()
     YAML_SECURITY_TOOLS=()
     
-    # Tentar usar yq primeiro
+    # Try yq first
     if command -v yq &>/dev/null; then
-        # Carregar pacotes essenciais
+        # Load essential packages
         while IFS= read -r package; do
             [[ -n "$package" ]] && YAML_ESSENTIAL_PACKAGES+=("$package")
         done < <(yq eval '.system_packages.essential[]' "$yaml_file" 2>/dev/null)
         
-        # Carregar ferramentas de segurança
+        # Load security tools
         while IFS= read -r tool; do
             [[ -n "$tool" ]] && YAML_SECURITY_TOOLS+=("$tool")
         done < <(yq eval '.system_packages.security_tools[]?' "$yaml_file" 2>/dev/null)
         
         if [[ ${#YAML_ESSENTIAL_PACKAGES[@]} -gt 0 ]]; then
-            debug "Pacotes essenciais do YAML carregados: ${#YAML_ESSENTIAL_PACKAGES[@]} pacotes"
+            debug "Essential packages from YAML loaded: ${#YAML_ESSENTIAL_PACKAGES[@]} packages"
         fi
         
         if [[ ${#YAML_SECURITY_TOOLS[@]} -gt 0 ]]; then
-            debug "Ferramentas de segurança do YAML carregadas: ${#YAML_SECURITY_TOOLS[@]} ferramentas"
+            debug "Security tools from YAML loaded: ${#YAML_SECURITY_TOOLS[@]} tools"
         fi
     elif command -v python3 &>/dev/null; then
-        # Fallback para Python (parse básico)
-        debug "Usando Python para parse básico do YAML"
-        # Implementação básica com Python seria aqui se necessário
+        # Fallback to Python (basic parse)
+        debug "Using Python for basic YAML parsing"
+        # Basic Python implementation would be here if needed
     fi
     
-    success "Configurações do YAML carregadas"
+    [[ $VERBOSE_MODE -eq 1 ]] && success "YAML configuration loaded"
     return 0
 }
 
-# Obter pacotes essenciais do YAML
+# Get essential packages from YAML
 get_yaml_essential_packages() {
     echo "${YAML_ESSENTIAL_PACKAGES[@]}"
 }
 
-# Obter ferramentas de segurança do YAML
+# Get security tools from YAML
 get_yaml_security_tools() {
     echo "${YAML_SECURITY_TOOLS[@]}"
 }
 
-# Salvar configurações
+# Save configuration
 save_config() {
     cat > "$CONFIG_FILE" <<EOF
 # SecBuild Configuration File
@@ -265,11 +265,11 @@ EOF
     debug "Configurações salvas em $CONFIG_FILE"
 }
 
-# Carregar configurações
+# Load configuration
 load_config() {
     if [[ -f "$CONFIG_FILE" ]]; then
         source "$CONFIG_FILE"
-        debug "Configurações carregadas de $CONFIG_FILE"
+        debug "Configuration loaded from $CONFIG_FILE"
     fi
 }
 

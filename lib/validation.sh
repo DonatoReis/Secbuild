@@ -1,31 +1,31 @@
 #!/usr/bin/env bash
 ################################################################################
-# validation.sh - Validações e Verificações
-# Valida arquivos, comandos, integridade
+# validation.sh - Validations and Verifications
+# Validates files, commands, integrity
 ################################################################################
 
-# Validar estrutura do package.ini
+# Validate package.ini structure
 validate_package_ini() {
     local ini_file="$1"
     local errors=0
     local warnings=0
     
-    info "val.validating"
+    [[ $VERBOSE_MODE -eq 1 ]] && info "Validating configuration file structure..."
     
     # Verificar se arquivo existe e é legível
     if [[ ! -f "$ini_file" ]]; then
-        error "val.not_found" "$ini_file"
+        error "File not found: $ini_file"
         return 1
     fi
     
     if [[ ! -r "$ini_file" ]]; then
-        error "val.no_read" "$ini_file"
+        error "File not readable: $ini_file"
         return 1
     fi
     
     # Verificar se arquivo não está vazio
     if [[ ! -s "$ini_file" ]]; then
-        error "val.empty"
+        error "File is empty"
         return 1
     fi
     
@@ -134,27 +134,27 @@ validate_package_ini() {
     
     # Verificar se tem pelo menos uma seção
     if [[ $has_sections -eq 0 ]]; then
-        error "val.no_sections"
+        error "No valid sections found in file"
         return 1
     fi
     
     # Reportar problemas
     if [[ ${#duplicate_sections[@]} -gt 0 ]]; then
-        warning "val.duplicate"
+        warning "Duplicate sections found:"
         for dup in "${duplicate_sections[@]}"; do
             warning "  $dup"
         done
-        info "val.duplicate_note"
+        info "Note: The last occurrence of each duplicate section will be used during processing."
     fi
     
     if [[ ${#invalid_lines[@]} -gt 0 ]]; then
         if [[ $errors -gt 0 ]]; then
-            error "val.errors"
+            error "Validation errors found:"
             for err in "${invalid_lines[@]}"; do
                 warning "  $err"
             done
         else
-            warning "val.warnings"
+            warning "Validation warnings:"
             for warn in "${invalid_lines[@]}"; do
                 warning "  $warn"
             done
@@ -163,13 +163,13 @@ validate_package_ini() {
     
     # Retornar status
     if [[ $errors -gt 0 ]]; then
-        error "val.failed" "$errors" "$warnings"
+        error "Validation failed with $errors error(s) and $warnings warning(s)"
         return 1
     elif [[ $warnings -gt 0 ]]; then
-        warning "val.completed_warnings" "$warnings"
+        warning "Validation completed with $warnings warning(s)"
         return 0
     else
-        success "val.completed"
+        success "Validation completed without errors"
         return 0
     fi
 }
@@ -198,15 +198,15 @@ validate_post_install() {
     # Verificar padrões perigosos
     for pattern in "${dangerous_patterns[@]}"; do
         if [[ "$commands" =~ $pattern ]]; then
-            error "post.dangerous" "$tool_name"
-            error "post.blocked" "$pattern"
+            error "Dangerous post_install command detected in $tool_name"
+            error "Blocked pattern: $pattern"
             return 1
         fi
     done
     
     # Verificar se não tenta modificar arquivos críticos do sistema
     if [[ "$commands" =~ (\/etc\/passwd|\/etc\/shadow|\/etc\/sudoers|\/boot|\/sys) ]]; then
-        error "post.critical_file" "$tool_name"
+        error "Post-install command attempts to modify critical system file in $tool_name"
         return 1
     fi
     
@@ -247,7 +247,7 @@ verify_file_integrity() {
     fi
     
     if [[ ! -f "$file" ]]; then
-        error "integrity.failed" "$file"
+        error "Integrity verification failed for $file"
         return 1
     fi
     
@@ -255,12 +255,12 @@ verify_file_integrity() {
     actual_hash=$(calculate_hash "$file" "$algorithm")
     
     if [[ "$actual_hash" == "$expected_hash" ]]; then
-        success "integrity.verified" "$file"
+        success "Integrity verified: $file"
         return 0
     else
-        error "integrity.failed" "$file"
-        error "integrity.expected" "$expected_hash"
-        error "integrity.obtained" "$actual_hash"
+        error "Integrity verification failed for $file"
+        error "Expected: $expected_hash"
+        error "Obtained: $actual_hash"
         return 1
     fi
 }

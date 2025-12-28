@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 ################################################################################
-# install.sh - Módulo de Instalação de Ferramentas
-# Gerencia instalação via Git, Go, Python, APT
+# install.sh - Installation Module
+# Manages installation via Git, Go, Python, APT
 ################################################################################
 
 # ==============================================================================
@@ -11,7 +11,7 @@
 # Cache de comandos para evitar múltiplas chamadas command -v
 declare -A COMMAND_CACHE
 
-# Cache de verificações de instalação (nova melhoria)
+# Installation verification cache (new improvement)
 declare -A INSTALLED_CACHE
 
 # Verificar se comando existe (com cache)
@@ -120,7 +120,7 @@ get_latest_github_release() {
     api_url=$(github_url_to_api "$repo_url")
     [[ -z "$api_url" ]] && return 1
     
-    # Buscar última release (não pre-release)
+    # Search for latest release (not pre-release)
     local latest_release
     if command -v grep &>/dev/null && grep --version 2>&1 | grep -q "GNU"; then
         # GNU grep com suporte a -P
@@ -144,7 +144,7 @@ get_latest_github_release() {
         return 0
     fi
     
-    # Se não encontrou release, tentar última tag
+    # If no release found, try latest tag
     local latest_tag
     latest_tag=$(get_latest_github_tag "$repo_url")
     if [[ -n "$latest_tag" ]]; then
@@ -224,16 +224,16 @@ verify_git_repository_integrity() {
     local expected_version="${3:-}"
     
     if [[ ! -d "$repo_path/.git" ]]; then
-        return 0  # Não é repositório Git, pular verificação
+        return 0  # Not a Git repository, skip verification
     fi
     
-    # Verificar se repositório está íntegro
+    # Verify repository integrity
     if ! git -C "$repo_path" fsck --no-progress --quiet >>"$LOG_FILE" 2>&1; then
-        warning "Repositório Git pode estar corrompido: $repo_path"
+        warning "Git repository may be corrupted: $repo_path"
         return 1
     fi
     
-    # Se temos versão esperada, verificar hash do commit
+    # If we have expected version, verify commit hash
     if [[ -n "$expected_version" ]]; then
         local current_hash
         current_hash=$(git -C "$repo_path" rev-parse HEAD 2>/dev/null || echo "")
@@ -241,11 +241,11 @@ verify_git_repository_integrity() {
         expected_hash=$(git -C "$repo_path" rev-parse "$expected_version" 2>/dev/null || echo "")
         
         if [[ -n "$current_hash" ]] && [[ -n "$expected_hash" ]] && [[ "$current_hash" != "$expected_hash" ]]; then
-            warning "Hash do commit não corresponde à versão esperada para $tool_name"
-            warning "Esperado: ${expected_hash:0:12}, Obtido: ${current_hash:0:12}"
-            # Não falha, apenas avisa (pode ser branch diferente)
+            warning "Commit hash does not match expected version for $tool_name"
+            warning "Expected: ${expected_hash:0:12}, Got: ${current_hash:0:12}"
+            # Does not fail, only warns (may be different branch)
         elif [[ -n "$current_hash" ]]; then
-            debug "Integridade verificada: hash ${current_hash:0:12} confere para $tool_name"
+            debug "Integrity verified: hash ${current_hash:0:12} matches for $tool_name"
         fi
     fi
     
@@ -267,12 +267,12 @@ check_disk_space() {
     
     # Verificar se conseguiu obter valor
     if [[ -z "$available" ]] || [[ "$available" == "0" ]]; then
-        warning "Não foi possível verificar espaço em disco, continuando..."
+        warning "Could not verify disk space, continuing..."
         return 0
     fi
     
     if [[ $available -lt $required_mb ]]; then
-        error "Espaço insuficiente: ${available}MB disponível, ${required_mb}MB necessário"
+        error "Insufficient space: ${available}MB available, ${required_mb}MB required"
         return 1
     fi
     
@@ -303,7 +303,7 @@ detect_go_arch() {
     echo "$goarch"
 }
 
-# Health check pós-instalação (melhorado - mais abrangente)
+# Post-installation health check (improved - more comprehensive)
 health_check_tool() {
     local tool="$1"
     local issues=()
@@ -330,33 +330,33 @@ health_check_tool() {
         done
         
         if [[ -z "$tool_path" ]]; then
-            debug "Health check: comando não encontrado no PATH"
+            debug "Health check: command not found in PATH"
             return 1
         fi
     fi
     
-    # 2. Verificar permissões de execução
+    # 2. Check execution permissions
     if [[ ! -x "$tool_path" ]]; then
-        debug "Health check: sem permissão de execução, tentando corrigir..."
+        debug "Health check: no execution permission, attempting to fix..."
         chmod +x "$tool_path" 2>/dev/null || {
-            warning "Não foi possível adicionar permissão de execução para $tool_path"
+            warning "Could not add execution permission for $tool_path"
             return 1
         }
     fi
     
-    # 3. Verificar se arquivo não está vazio
+    # 3. Check if file is not empty
     if [[ -f "$tool_path" ]] && [[ ! -s "$tool_path" ]]; then
-        warning "Health check: arquivo vazio ou corrompido: $tool_path"
+        warning "Health check: empty or corrupted file: $tool_path"
         return 1
     fi
     
-    # 4. Verificar se é link quebrado
+    # 4. Check if it's a broken link
     if [[ -L "$tool_path" ]] && [[ ! -e "$tool_path" ]]; then
-        warning "Health check: link simbólico quebrado: $tool_path"
+        warning "Health check: broken symbolic link: $tool_path"
         return 1
     fi
     
-    # 5. Verificar se executa sem erros fatais (timeout de 5s)
+    # 5. Check if it executes without fatal errors (5s timeout)
     if ! timeout 5 "$tool" --version &>/dev/null 2>&1; then
         # Tentar versão alternativa
         if ! timeout 5 "$tool" -version &>/dev/null 2>&1; then
@@ -364,46 +364,46 @@ health_check_tool() {
             if ! timeout 5 "$tool" --help &>/dev/null 2>&1; then
                 # Se todas falharam, verificar se é binário válido
                 if [[ -f "$tool_path" ]]; then
-                    # Para binários ELF, verificar se é executável válido
+                    # For ELF binaries, check if it's a valid executable
                     if file "$tool_path" 2>/dev/null | grep -q "ELF"; then
-                        # É binário válido, pode não ter --version, mas está OK
-                        debug "Health check: binário ELF válido (sem --version)"
+                        # Valid binary, may not have --version, but it's OK
+                        debug "Health check: valid ELF binary (no --version)"
                         return 0
                     else
-                        # Não é binário, pode ser script - verificar se tem shebang
+                        # Not a binary, may be script - check if it has shebang
                         if head -1 "$tool_path" 2>/dev/null | grep -q "^#!"; then
-                            debug "Health check: script válido (sem --version)"
+                            debug "Health check: valid script (no --version)"
                             return 0
                         else
-                            warning "Health check: falha ao executar comando (timeout ou erro fatal)"
+                            warning "Health check: failed to execute command (timeout or fatal error)"
                             return 1
                         fi
                     fi
                 else
-                    warning "Health check: falha ao executar comando"
+                    warning "Health check: failed to execute command"
                     return 1
                 fi
             fi
         fi
     fi
     
-    # 6. Para binários ELF: verificar dependências dinâmicas (opcional, não falha)
+    # 6. For ELF binaries: check dynamic dependencies (optional, does not fail)
     if [[ -f "$tool_path" ]] && command -v ldd &>/dev/null && file "$tool_path" 2>/dev/null | grep -q "ELF"; then
         local missing_deps
         missing_deps=$(ldd "$tool_path" 2>&1 | grep -c "not found" || echo "0")
         
         if [[ $missing_deps -gt 0 ]]; then
-            warning "Health check: $missing_deps dependência(s) dinâmica(s) podem estar faltando para $tool"
-            # Não falha, apenas avisa
+            warning "Health check: $missing_deps dynamic dependency(ies) may be missing for $tool"
+            # Does not fail, only warns
         fi
     fi
     
-    # Se chegou aqui, tudo OK
-    debug "Health check: $tool passou em todas as verificações"
+    # If we got here, everything is OK
+    debug "Health check: $tool passed all verifications"
     return 0
 }
 
-# Adicionar ferramenta a array de forma thread-safe (para instalação paralela)
+# Add tool to array in thread-safe way (for parallel installation)
 add_to_installed() {
     local tool="$1"
     local result_file="/tmp/secbuild_installed_$$.tmp"
@@ -422,7 +422,7 @@ add_to_skipped() {
     echo "$tool" >> "$result_file" 2>/dev/null || true
 }
 
-# Consolidar resultados de arquivos temporários para arrays globais
+# Consolidate results from temporary files to global arrays
 consolidate_parallel_results() {
     local pid=$$
     
@@ -434,7 +434,7 @@ consolidate_parallel_results() {
         rm -f "/tmp/secbuild_installed_${pid}.tmp" 2>/dev/null
     fi
     
-    # Consolidar falhas
+    # Consolidate failures
     if [[ -f "/tmp/secbuild_failed_${pid}.tmp" ]]; then
         while IFS= read -r tool; do
             [[ -n "$tool" ]] && FAILED_TOOLS+=("$tool")
@@ -451,7 +451,7 @@ consolidate_parallel_results() {
     fi
 }
 
-# Coletar métricas de instalação
+# Collect installation metrics
 collect_metrics() {
     local metrics_file="${CACHE_DIR:-$WORK_DIR/cache}/metrics_$(date +%Y%m%d).json"
     local start_time="${START_TIME:-$(date +%s)}"
@@ -486,26 +486,26 @@ retry_with_adaptive_backoff() {
     local last_error=""
     
     while [[ $attempt -le $max_attempts ]]; do
-        # Executar comando e capturar erro
+        # Execute command and capture error
         if "${cmd[@]}" >>"$LOG_FILE" 2>&1; then
             return 0
         else
             last_error=$?
         fi
         
-        # Se não é última tentativa, calcular delay adaptativo
+        # If not last attempt, calculate adaptive delay
         if [[ $attempt -lt $max_attempts ]]; then
-            # Backoff exponencial base
+            # Exponential backoff base
             local delay=$((base_delay * (2 ** (attempt - 1))))
             
-            # Jitter aleatório para evitar "thundering herd" (10% do delay)
+            # Random jitter to avoid "thundering herd" (10% of delay)
             local jitter=$((RANDOM % (delay / 10 + 1)))
             delay=$((delay + jitter))
             
-            # Limitar delay máximo
+            # Limit maximum delay
             [[ $delay -gt $max_delay ]] && delay=$max_delay
             
-            debug "Tentativa $attempt/$max_attempts falhou. Aguardando ${delay}s antes de tentar novamente..."
+            debug "Attempt $attempt/$max_attempts failed. Waiting ${delay}s before retrying..."
             sleep "$delay"
         fi
         
@@ -515,19 +515,19 @@ retry_with_adaptive_backoff() {
     return 1
 }
 
-# Função melhorada para instalar ferramentas Go (com retry adaptativo)
+# Improved function to install Go tools (with adaptive retry)
 install_go_tool_with_retry() {
     local tool_name="$1"
     local package="$2"
     
-    # Detectar arquitetura
+    # Detect architecture
     local goarch
     goarch=$(detect_go_arch)
     
-    # Flags de otimização Go
+    # Go optimization flags
     local go_flags="-ldflags=-s -w -trimpath"
     
-    # Tentar métodos em ordem de preferência com retry adaptativo
+    # Try methods in order of preference with adaptive retry
     local methods=(
         "GOARCH=$goarch go install $go_flags ${package}@latest"
         "GOARCH=$goarch go install ${package}@latest"
@@ -536,15 +536,15 @@ install_go_tool_with_retry() {
     )
     
     for method in "${methods[@]}"; do
-        debug "Tentando instalar $tool_name via: $method"
+        debug "Attempting to install $tool_name via: $method"
         
-        # Usar retry adaptativo (5 tentativas, delay base 2s, max 30s)
+        # Use adaptive retry (5 attempts, base delay 2s, max 30s)
         if retry_with_adaptive_backoff 5 2 30 bash -c "$method"; then
             return 0
         fi
     done
     
-    error "Falha ao instalar $tool_name após todas as tentativas"
+    error "Failed to install $tool_name after all attempts"
     return 1
 }
 
@@ -576,10 +576,10 @@ install_from_git() {
     local script_name="$2"
     local tool_name="$3"
     
-    # Validar URL antes de usar
+    # Validate URL before using
     if ! validate_url "$repo_url"; then
-        warning "URL inválida ou inacessível: $repo_url"
-        # Continuar mesmo assim, pode ser um problema temporário de rede
+        warning "Invalid or inaccessible URL: $repo_url"
+        # Continue anyway, may be a temporary network issue
     fi
     
     local repo_name="${repo_url##*/}"
@@ -596,30 +596,30 @@ install_from_git() {
     local expected_hash=""
     
     if [[ "${USE_LATEST_RELEASE:-1}" -eq 1 ]] && [[ "$repo_url" =~ github\.com ]]; then
-        debug "Buscando versão mais recente e estável para $tool_name..."
+        debug "Searching for latest stable version for $tool_name..."
         target_version=$(get_latest_github_release "$repo_url")
         if [[ -n "$target_version" ]]; then
-            info "Versão mais recente encontrada: $target_version"
+            info "Latest version found: $target_version"
         else
-            debug "Não foi possível obter versão específica, usando branch padrão"
+            debug "Could not get specific version, using default branch"
         fi
     fi
     
-    # NOVA MELHORIA: Verificar se há hash esperado no registro (validação de integridade)
+    # NEW IMPROVEMENT: Check if there's expected hash in registry (integrity validation)
     IFS='|' read -r _url _script _deps _post <<< "${TOOLS_REGISTRY[$tool_name]:-}"
-    # Hash pode estar no package.ini como atributo separado (será implementado)
-    # Por enquanto, verificamos hash do commit Git após clone
+    # Hash may be in package.ini as separate attribute (to be implemented)
+    # For now, we verify Git commit hash after clone
     
-    debug "git.installing" "$tool_name" "$repo_url${target_version:+ (v$target_version)}"
+    debug "Installing $tool_name from Git: $repo_url${target_version:+ (v$target_version)}"
     
     if [[ $DRY_RUN -eq 1 ]]; then
-        info "dryrun.would_clone" "$repo_url${target_version:+@$target_version}" "$install_path"
+        info "Would clone/update repository: $repo_url${target_version:+@$target_version} -> $install_path"
         return 0
     fi
     
     # Clone ou update
     if [[ -d "$install_path/.git" ]]; then
-        debug "git.updating"
+        debug "Updating existing repository..."
         
         # Se temos uma versão específica, verificar se precisa atualizar
         if [[ -n "$target_version" ]]; then
@@ -649,10 +649,10 @@ install_from_git() {
             # Sem versão específica, usar pull normal
             if git -C "$install_path" fetch --dry-run &>/dev/null; then
                 if git -C "$install_path" pull -q --ff-only >>"$LOG_FILE" 2>&1; then
-                    debug "git.updated" "$repo_name"
+                    debug "Repository updated: $repo_name"
                     save_to_cache "$cache_key" "$(date +%s)"
                 else
-                    warning "git.update_failed" "$repo_name"
+                    warning "Failed to update $repo_name"
                     return 1
                 fi
             else
@@ -662,11 +662,11 @@ install_from_git() {
         fi
     else
         if [[ -d "$install_path" ]] && [[ ! -d "$install_path/.git" ]]; then
-            debug "Diretório existe mas não é repositório Git, removendo..."
+            debug "Directory exists but is not a Git repository, removing..."
             rm -rf "$install_path"
         fi
         
-        debug "git.cloning"
+        debug "Cloning repository..."
         mkdir -p "$(dirname "$install_path")"
         
         # Se temos versão específica, clonar e fazer checkout
@@ -678,95 +678,95 @@ install_from_git() {
                 
                 # Tentar fazer checkout da versão
                 if git -C "$install_path" checkout -q "$target_version" >>"$LOG_FILE" 2>&1; then
-                    debug "git.cloned" "$repo_name" " (versão $target_version)"
+                    debug "Repository cloned: $repo_name" " (version $target_version)"
                     
-                    # NOVA MELHORIA: Verificar integridade do repositório clonado
+                    # NEW IMPROVEMENT: Verify cloned repository integrity
                     verify_git_repository_integrity "$install_path" "$tool_name" "$target_version"
                     
                     save_to_cache "$cache_key" "$(date +%s)"
                 else
-                    # Se falhar, tentar clone completo com tags
-                    warning "Não foi possível fazer checkout da versão $target_version, clonando repositório completo..."
+                    # If fails, try full clone with tags
+                    warning "Could not checkout version $target_version, cloning full repository..."
                     rm -rf "$install_path"
                     if git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
                         if git -C "$install_path" checkout -q "$target_version" >>"$LOG_FILE" 2>&1; then
-                            debug "git.cloned" "$repo_name" " (versão $target_version)"
+                            debug "Repository cloned: $repo_name" " (version $target_version)"
                             
-                            # Verificar integridade
+                            # Verify integrity
                             verify_git_repository_integrity "$install_path" "$tool_name" "$target_version"
                             
                             save_to_cache "$cache_key" "$(date +%s)"
                         else
-                            warning "Falha ao fazer checkout da versão $target_version, usando branch padrão"
+                            warning "Failed to checkout version $target_version, using default branch"
                             save_to_cache "$cache_key" "$(date +%s)"
                         fi
                     else
-                        error "git.clone_failed" "$repo_name"
+                        error "Failed to clone $repo_name"
                         return 1
                     fi
                 fi
             else
-                # Fallback para clone completo
-                warning "Shallow clone falhou, tentando clone completo..."
+                # Fallback to full clone
+                warning "Shallow clone failed, trying full clone..."
                 if git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
                     if [[ -n "$target_version" ]]; then
                         git -C "$install_path" checkout -q "$target_version" >>"$LOG_FILE" 2>&1 || true
                     fi
-                    debug "git.cloned" "$repo_name"
+                    debug "Repository cloned: $repo_name"
                     save_to_cache "$cache_key" "$(date +%s)"
                 else
-                    error "git.clone_failed" "$repo_name"
+                    error "Failed to clone $repo_name"
                     return 1
                 fi
             fi
         else
-            # Sem versão específica, usar shallow clone normal
+            # No specific version, use normal shallow clone
             if git clone --depth 1 --single-branch -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
-                debug "git.cloned" "$repo_name"
+                debug "Repository cloned: $repo_name"
                 
-                # Verificar integridade após clone
+                # Verify integrity after clone
                 verify_git_repository_integrity "$install_path" "$tool_name"
                 
                 save_to_cache "$cache_key" "$(date +%s)"
             else
-                # Fallback para clone completo se shallow falhar
-                warning "Shallow clone falhou, tentando clone completo..."
+                # Fallback to full clone if shallow fails
+                warning "Shallow clone failed, trying full clone..."
                 if git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
-                    debug "git.cloned" "$repo_name"
+                    debug "Repository cloned: $repo_name"
                     
-                    # Verificar integridade após clone
+                    # Verify integrity after clone
                     verify_git_repository_integrity "$install_path" "$tool_name"
                     
                     save_to_cache "$cache_key" "$(date +%s)"
                 else
-                    error "git.clone_failed" "$repo_name"
+                    error "Failed to clone $repo_name"
                     return 1
                 fi
             fi
         fi
     fi
     
-    # Instalar dependências Python
+    # Install Python dependencies
     if [[ -f "$install_path/requirements.txt" ]]; then
-        debug "Instalando dependências Python..."
+        debug "Installing Python dependencies..."
         if install_requirements_safe "$install_path/requirements.txt" "$tool_name"; then
-            debug "Requirements.txt instalado para $tool_name"
+            debug "Requirements.txt installed for $tool_name"
         else
-            warning "Falha ao instalar requirements.txt para $tool_name"
+            warning "Failed to install requirements.txt for $tool_name"
         fi
     fi
     
-    # Instalar via setup.py
+    # Install via setup.py
     if [[ -f "$install_path/setup.py" ]]; then
-        debug "Executando setup.py..."
+        debug "Running setup.py..."
         if (cd "$install_path" && python3 setup.py -q install) >>"$LOG_FILE" 2>&1; then
-            debug "Setup.py executado para $tool_name"
+            debug "Setup.py executed for $tool_name"
         else
-            warning "Falha ao executar setup.py para $tool_name"
+            warning "Failed to execute setup.py for $tool_name"
         fi
     fi
     
-    # Criar link simbólico
+    # Create symbolic link
     if [[ -n "$script_name" ]]; then
         local script_path="$install_path/$script_name"
         if [[ -f "$script_path" ]]; then
@@ -774,9 +774,9 @@ install_from_git() {
             local bin_name="${script_name##*/}"
             bin_name="${bin_name%.*}"
             ln -sf "$script_path" "$BIN_DIR/$bin_name"
-            debug "Link criado: $BIN_DIR/$bin_name -> $script_path"
+            debug "Link created: $BIN_DIR/$bin_name -> $script_path"
         else
-            warning "Script não encontrado: $script_path"
+            warning "Script not found: $script_path"
         fi
     fi
     
@@ -788,10 +788,10 @@ install_with_go() {
     local go_package="$1"
     local tool_name="$2"
     
-    debug "go.installing" "$tool_name" "$go_package"
+    debug "Installing $tool_name via Go: $go_package"
     
     if [[ $DRY_RUN -eq 1 ]]; then
-        info "dryrun.would_install" "$go_package"
+        info "Would install via Go: $go_package"
         return 0
     fi
     
@@ -801,11 +801,11 @@ install_with_go() {
     [[ "$go_package" != *@* ]] && go_package="${go_package}@latest"
     
     if install_go_tool_with_retry "$tool_name" "$go_package"; then
-        debug "go.installed" "$tool_name"
+        debug "$tool_name installed via Go"
         validate_installation "$tool_name" "/usr/local/bin/$tool_name"
         return 0
     else
-        error "go.failed" "$tool_name" "$go_package"
+        error "Failed to install $tool_name via Go ($go_package)"
         return 1
     fi
 }
@@ -815,10 +815,10 @@ execute_post_install() {
     local commands="$1"
     local tool_name="$2"
     
-    debug "post.executing" "$tool_name"
+    debug "Executing post-install commands for $tool_name"
     
     if ! validate_post_install "$commands" "$tool_name"; then
-        error "post.rejected" "$tool_name"
+        error "Post-install commands rejected for security: $tool_name"
         return 1
     fi
     
@@ -829,21 +829,21 @@ execute_post_install() {
     debug "post_install($tool_name): $commands"
     
     if [[ $DRY_RUN -eq 1 ]]; then
-        info "dryrun.would_exec" "$commands"
+        info "Would execute: $commands"
         return 0
     fi
     
     local safe_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     if env -i PATH="$safe_path" HOME="$HOME" USER="$USER" bash -euo pipefail -c "$commands" >>"$LOG_FILE" 2>&1; then
-        debug "post.completed" "$tool_name"
+        debug "Post-installation completed for $tool_name"
         return 0
     else
-        error "post.failed" "$tool_name"
+        error "Post-installation failed for $tool_name"
         return 1
     fi
 }
 
-# Obter nomes de binários para ferramenta
+# Get binary names for tool
 binary_names_for_tool() {
     local tool="$1"
     IFS='|' read -r _url script _deps _post <<< "${TOOLS_REGISTRY[$tool]}"
@@ -857,17 +857,17 @@ binary_names_for_tool() {
     printf '%s\n' "$tool" "$guess" | sort -u
 }
 
-# Verificar se ferramenta está instalada (usando cache de comandos + cache de instalação)
+# Check if tool is installed (using command cache + installation cache)
 is_installed_tool() {
     local tool="$1"
     
-    # NOVA MELHORIA: Verificar cache de instalação primeiro (muito mais rápido)
+    # NEW IMPROVEMENT: Check installation cache first (much faster)
     if [[ -n "${INSTALLED_CACHE[$tool]:-}" ]]; then
-        # Cache hit! Retorna imediatamente (0.001s vs 0.1-0.5s)
+        # Cache hit! Return immediately (0.001s vs 0.1-0.5s)
         return "${INSTALLED_CACHE[$tool]}"
     fi
     
-    # Cache miss: verificar de verdade
+    # Cache miss: check for real
     local binary
     local found=0
     
@@ -882,7 +882,7 @@ is_installed_tool() {
         fi
     done < <(binary_names_for_tool "$tool")
     
-    # Salvar resultado no cache para próximas verificações
+    # Save result to cache for next verifications
     if [[ $found -eq 1 ]]; then
         INSTALLED_CACHE[$tool]=0
         return 0
@@ -892,7 +892,7 @@ is_installed_tool() {
     fi
 }
 
-# Validar instalação (usando cache de comandos)
+# Validate installation (using command cache)
 validate_installation() {
     local tool_name="$1"
     local expected_path="${2:-/usr/local/bin/$tool_name}"
@@ -918,19 +918,19 @@ validate_installation() {
     return 1
 }
 
-# Instalar ferramenta única (com health check e arrays thread-safe)
+# Install single tool (with health check and thread-safe arrays)
 install_single_tool() {
     local tool_name="$1"
     local use_thread_safe="${2:-0}"  # Flag para usar arrays thread-safe em paralelo
     
     if [[ -z "${TOOLS_REGISTRY[$tool_name]:-}" ]]; then
-        warning "install.not_found" "$tool_name"
+        warning "Tool '$tool_name' not found in registry"
         [[ $use_thread_safe -eq 1 ]] && add_to_failed "$tool_name"
         return 1
     fi
     
     if is_installed_tool "$tool_name"; then
-        info "install.already_installed" "$tool_name"
+        info "$tool_name already installed"
         if [[ $use_thread_safe -eq 1 ]]; then
             add_to_skipped "$tool_name"
         else
@@ -939,11 +939,11 @@ install_single_tool() {
         return 0
     fi
     
-    info "install.installing" "$tool_name"
+    info "Installing $tool_name..."
     
-    # Verificar espaço em disco antes de instalar
+    # Check disk space before installing
     if ! check_disk_space 500; then
-        error "Espaço insuficiente para instalar $tool_name"
+        error "Insufficient space to install $tool_name"
         [[ $use_thread_safe -eq 1 ]] && add_to_failed "$tool_name"
         return 1
     fi
@@ -952,18 +952,18 @@ install_single_tool() {
     
     local install_success=0
     
-    # Instalar dependências
+    # Install dependencies
     if [[ -n "$depends" ]]; then
-        debug "Instalando dependências: $depends"
+        debug "Installing dependencies: $depends"
         apt_update_once
         if ! dry_run_exec "apt-get install -y -qq $depends &>>\"$LOG_FILE\""; then
-            [[ $DRY_RUN -eq 0 ]] && warning "deps.failed" "$depends"
+            [[ $DRY_RUN -eq 0 ]] && warning "Failed to install $depends"
         else
-            debug "deps.installed" "$depends"
+            debug "$depends installed successfully"
         fi
     fi
     
-    # Instalar ferramenta
+    # Install tool
     if [[ -n "$url" ]]; then
         install_from_git "$url" "$script" "$tool_name" && install_success=1
     fi
@@ -986,7 +986,7 @@ install_single_tool() {
         fi
     fi
     
-    # Health check pós-instalação
+    # Post-installation health check
     if [[ $install_success -eq 1 ]]; then
         if health_check_tool "$tool_name"; then
             TOOLS_STATUS["$tool_name"]="installed"
@@ -995,18 +995,18 @@ install_single_tool() {
             else
                 INSTALLED_TOOLS+=("$tool_name")
             fi
-            success "install.success" "$tool_name"
+            success "✓ $tool_name installed successfully"
             return 0
         else
-            warning "Ferramenta $tool_name instalada mas não passou no health check"
-            # Considerar como instalada mesmo assim (pode ser problema de PATH)
+            warning "Tool $tool_name installed but did not pass health check"
+            # Consider as installed anyway (may be PATH issue)
             TOOLS_STATUS["$tool_name"]="installed"
             if [[ $use_thread_safe -eq 1 ]]; then
                 add_to_installed "$tool_name"
             else
                 INSTALLED_TOOLS+=("$tool_name")
             fi
-            success "install.success" "$tool_name"
+            success "✓ $tool_name installed successfully"
             return 0
         fi
     else
@@ -1016,14 +1016,14 @@ install_single_tool() {
         else
             FAILED_TOOLS+=("$tool_name")
         fi
-        error "install.failed" "$tool_name"
+        error "Failed to install $tool_name"
         return 1
     fi
 }
 
-# Instalar todas as ferramentas
+# Install all tools
 install_all_tools() {
-    info "install.all"
+    info "Starting installation of all tools..."
     
     # Registrar tempo de início
     export START_TIME=$(date +%s)
@@ -1052,7 +1052,7 @@ install_all_tools() {
     print_installation_summary
 }
 
-# Instalação paralela (com wait -n e arrays thread-safe)
+# Parallel installation (with wait -n and thread-safe arrays)
 install_tools_parallel() {
     local tools=("$@")
     local total=${#tools[@]}
@@ -1062,7 +1062,7 @@ install_tools_parallel() {
     declare -a pids=()
     declare -A pid_to_tool=()
     
-    # Verificar se Bash suporta wait -n (Bash 4.3+)
+    # Check if Bash supports wait -n (Bash 4.3+)
     local supports_wait_n=0
     if [[ "${BASH_VERSION%%.*}" -ge 4 ]]; then
         local minor_version="${BASH_VERSION#*.}"
@@ -1072,15 +1072,15 @@ install_tools_parallel() {
         fi
     fi
     
-    info "install.parallel" "$total" "$max_jobs"
+    info "Installing $total tools in parallel (max: $max_jobs jobs)"
     
     for tool in "${tools[@]}"; do
-        # Aguardar slot disponível
+        # Wait for available slot
         while [[ $running -ge $max_jobs ]]; do
             if [[ $supports_wait_n -eq 1 ]]; then
-                # Usar wait -n (mais eficiente, Bash 4.3+)
-                # Nota: -p só está disponível no Bash 5.1+, então usamos polling
-                # mas mais eficiente que o método antigo
+                # Use wait -n (more efficient, Bash 4.3+)
+                # Note: -p is only available in Bash 5.1+, so we use polling
+                # but more efficient than the old method
                 local found=0
                 for pid in "${pids[@]}"; do
                     if ! kill -0 "$pid" 2>/dev/null; then
@@ -1089,9 +1089,9 @@ install_tools_parallel() {
                         local exit_code=$?
                         
                         if [[ $exit_code -eq 0 ]]; then
-                            success "install.completed" "$finished_tool"
+                            success "✓ $finished_tool completed"
                         else
-                            error "install.failed_tool" "$finished_tool"
+                            error "✗ $finished_tool failed"
                         fi
                         
                         # Remover PID do array
@@ -1110,7 +1110,7 @@ install_tools_parallel() {
                 done
                 [[ $found -eq 0 ]] && sleep 0.1
             else
-                # Fallback: polling com kill -0
+                # Fallback: polling with kill -0
                 for pid in "${pids[@]}"; do
                     if ! kill -0 "$pid" 2>/dev/null; then
                         local finished_tool="${pid_to_tool[$pid]}"
@@ -1118,9 +1118,9 @@ install_tools_parallel() {
                         local exit_code=$?
                         
                         if [[ $exit_code -eq 0 ]]; then
-                            success "install.completed" "$finished_tool"
+                            success "✓ $finished_tool completed"
                         else
-                            error "install.failed_tool" "$finished_tool"
+                            error "✗ $finished_tool failed"
                         fi
                         
                         # Remover PID do array
@@ -1140,7 +1140,7 @@ install_tools_parallel() {
             fi
         done
         
-        # Iniciar instalação em background (com flag thread-safe)
+        # Start installation in background (with thread-safe flag)
         (
             install_single_tool "$tool" 1 >/dev/null 2>&1
             exit $?
@@ -1151,26 +1151,26 @@ install_tools_parallel() {
         pid_to_tool[$pid]="$tool"
         ((running++))
         
-        debug "install.started" "$tool" "$pid"
+        debug "Started: $tool (PID: $pid)"
     done
     
-    # Aguardar todos os processos restantes
+    # Wait for all remaining processes
     for pid in "${pids[@]}"; do
         local finished_tool="${pid_to_tool[$pid]}"
         wait "$pid"
         local exit_code=$?
         
         if [[ $exit_code -eq 0 ]]; then
-            success "install.completed" "$finished_tool"
+            success "✓ $finished_tool completed"
         else
-            error "install.failed_tool" "$finished_tool"
+            error "✗ $finished_tool failed"
         fi
         
         ((current++))
         show_progress "$current" "$total" "$(t 'install.progress' '...')"
     done
     
-    # Consolidar resultados de arquivos temporários
+    # Consolidate results from temporary files
     consolidate_parallel_results
     
     echo
@@ -1182,11 +1182,11 @@ install_profile() {
     profile="${profile,,}"
     
     if [[ -z "$profile" ]]; then
-        error "profile.invalid"
+        error "Invalid profile!"
         return 1
     fi
     
-    info "profile.installing" "$profile"
+    info "Installing profile: $profile"
     
     # Verificar se o perfil existe
     set +u
@@ -1194,9 +1194,9 @@ install_profile() {
     set -u
     
     if [[ -z "$tools" ]]; then
-        error "profile.not_found" "$profile"
+        error "Profile '$profile' not found"
         echo
-        info "profile.available"
+        info "Available profiles:"
         set +u
         for p in "${!PROFILE_TOOLS[@]}"; do
             echo "  - $p"
@@ -1210,23 +1210,23 @@ install_profile() {
     read -ra tool_array <<< "$tools"
     
     if [[ ${#tool_array[@]} -eq 0 ]]; then
-        error "profile.not_found" "$profile"
+        error "Profile '$profile' not found"
         return 1
     fi
     
-    info "profile.tools" "$profile" "${#tool_array[@]}"
+    info "Tools in profile '$profile': ${#tool_array[@]}"
     echo
     
-    # Mostrar ferramentas que serão instaladas
+    # Show tools that will be installed
     if [[ ${VERBOSE_MODE:-0} -eq 1 ]]; then
-        echo -e "${CYAN}Ferramentas do perfil '$profile':${RESET}"
+        echo -e "${CYAN}Tools in profile '$profile':${RESET}"
         for tool in "${tool_array[@]}"; do
             echo "  • $tool"
         done
         echo
     fi
     
-    # Instalar ferramentas
+    # Install tools
     local installed=0
     local failed=0
     
@@ -1246,7 +1246,7 @@ install_profile() {
     print_installation_summary
     
     if [[ $installed -gt 0 ]]; then
-        success "Perfil '$profile' processado: $installed instalada(s), $failed falha(s)"
+        success "Profile '$profile' processed: $installed installed, $failed failed"
     fi
 }
 
@@ -1281,7 +1281,7 @@ list_profiles() {
     set -u
     
     if [[ $profile_count -eq 0 ]]; then
-        warning "profile.none"
+        warning "No profiles configured"
         return 0
     fi
     
@@ -1300,7 +1300,7 @@ list_profiles() {
         local tool_count
         tool_count=$(echo "$tool_list" | wc -w)
         
-        echo -e "  ${GREEN}$profile${RESET} - ${YELLOW}$tool_count${RESET} ferramenta(s)"
+        echo -e "  ${GREEN}$profile${RESET} - ${YELLOW}$tool_count${RESET} tool(s)"
     done <<< "$sorted_profiles"
 }
 
@@ -1321,7 +1321,7 @@ pkg_installed_apt() {
 
 # Instalar dependências principais
 install_core_dependencies() {
-    info "deps.installing"
+    info "Installing core system dependencies..."
     
     # Pacotes básicos essenciais
     local core_deps=(
@@ -1331,7 +1331,7 @@ install_core_dependencies() {
     
     # Adicionar pacotes do tools_config.yaml se disponível
     if [[ ${#YAML_ESSENTIAL_PACKAGES[@]} -gt 0 ]]; then
-        debug "Adicionando ${#YAML_ESSENTIAL_PACKAGES[@]} pacotes do tools_config.yaml"
+        debug "Adding ${#YAML_ESSENTIAL_PACKAGES[@]} packages from tools_config.yaml"
         for yaml_pkg in "${YAML_ESSENTIAL_PACKAGES[@]}"; do
             # Evitar duplicatas
             local found=0
@@ -1347,62 +1347,77 @@ install_core_dependencies() {
     
     apt_update_once
     
+    # Preparar para barra de progresso
+    local total_deps=${#core_deps[@]}
+    local current_dep=0
     local failed_deps=()
+    local start_time=$(date +%s)
+    
     for dep in "${core_deps[@]}"; do
+        ((current_dep++))
+        
         if ! pkg_installed_apt "$dep"; then
-            info "deps.installing_pkg" "$dep"
+            # Show progress bar during installation
+            show_progress "$current_dep" "$total_deps" "$dep" "$start_time"
+            info "Installing $dep..."
+            
             if ! dry_run_exec "apt-get install -y -qq $dep &>>\"$LOG_FILE\""; then
                 [[ $DRY_RUN -eq 0 ]] && failed_deps+=("$dep")
             else
-                debug "deps.installed" "$dep"
+                debug "$dep installed successfully"
             fi
         else
-            debug "deps.already_installed" "$dep"
+            # Show progress even for already installed packages
+            show_progress "$current_dep" "$total_deps" "$dep (already installed)" "$start_time"
+            debug "$dep already installed"
         fi
     done
     
+    # Clear progress bar
+    echo
+    
     if [[ ${#failed_deps[@]} -gt 0 ]]; then
-        warning "deps.some_failed" "${failed_deps[*]}"
-        warning "deps.manual_install"
+        warning "Some dependencies failed: ${failed_deps[*]}"
+        warning "You may need to install them manually"
     else
-        success "deps.all_installed"
+        success "All core dependencies installed"
     fi
     
     if command -v pip3 &>/dev/null && [[ $DRY_RUN -eq 0 ]]; then
-        debug "deps.updating_pip"
-        pip3 install --upgrade pip >>"$LOG_FILE" 2>&1 || warning "deps.pip_failed"
+        debug "Updating pip..."
+        pip3 install --upgrade pip >>"$LOG_FILE" 2>&1 || warning "Failed to update pip"
     elif [[ $DRY_RUN -eq 1 ]]; then
-        info "dryrun.would_update"
+        info "Would update pip"
     fi
 }
 
-# Instalar ferramentas vendor
+# Install vendor tools
 install_vendor_tools() {
-    info "Baixando ferramentas auxiliares..."
+    info "Downloading auxiliary tools..."
     
     if [[ ! -d "$VENDOR_DIR/progressbar" ]]; then
-        info "Instalando progressbar..."
+        info "Installing progressbar..."
         if git clone -q "$PROGRESSBAR_URL" "$VENDOR_DIR/progressbar" >>"$LOG_FILE" 2>&1; then
-            debug "Progressbar instalado"
+            debug "Progressbar installed"
         else
-            warning "Falha ao instalar progressbar"
+            warning "Failed to install progressbar"
         fi
     fi
     
     if [[ ! -d "$VENDOR_DIR/bash-ini-parser" ]]; then
-        info "Instalando bash-ini-parser..."
+        info "Installing bash-ini-parser..."
         if git clone -q "$INI_PARSER_URL" "$VENDOR_DIR/bash-ini-parser" >>"$LOG_FILE" 2>&1; then
-            debug "Bash-ini-parser instalado"
+            debug "Bash-ini-parser installed"
         else
-            warning "Falha ao instalar bash-ini-parser"
+            warning "Failed to install bash-ini-parser"
         fi
     fi
     
     if [[ -f "$VENDOR_DIR/bash-ini-parser/bash-ini-parser" ]]; then
         source "$VENDOR_DIR/bash-ini-parser/bash-ini-parser"
-        success "Ferramentas auxiliares instaladas"
+        success "Auxiliary tools installed"
     else
-        warning "Bash-ini-parser não encontrado, usando parser manual"
+        warning "Bash-ini-parser not found, using manual parser"
     fi
 }
 
@@ -1414,18 +1429,18 @@ apt_update_once() {
     fi
     
     if [[ $DRY_RUN -eq 1 ]]; then
-        info "dryrun.would_exec" "apt-get update"
+        info "Would execute: apt-get update"
         APT_UPDATE_DONE=1
         return 0
     fi
     
-    info "deps.updating"
+    info "Updating APT repositories..."
     if apt-get update -qq 2>>"$ERROR_LOG"; then
         APT_UPDATE_DONE=1
-        success "deps.updated"
+        success "APT repositories updated"
         return 0
     else
-        warning "deps.failed_update"
+        warning "Failed to update repositories"
         return 1
     fi
 }
@@ -1435,13 +1450,13 @@ dry_run_exec() {
     local cmd="$*"
     
     if [[ $DRY_RUN -eq 1 ]]; then
-        info "dryrun.would_exec" "$cmd"
+        info "Would execute: $cmd"
         return 0
     fi
     
-    # Validar comando antes de executar (bloquear comandos perigosos)
+    # Validate command before executing (block dangerous commands)
     if [[ "$cmd" =~ (rm\s+-rf\s+/|format\s+|mkfs|dd\s+if=.*of=/dev/|mkfs\.|fdisk\s+/dev/) ]]; then
-        error "Comando perigoso bloqueado por segurança: $cmd"
+        error "Dangerous command blocked for security: $cmd"
         return 1
     fi
     

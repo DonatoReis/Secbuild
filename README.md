@@ -20,11 +20,11 @@
 - 📦 **Profile-Based Installation**: Install tools by category (recon, web, dns, etc.)
 - ⚡ **Performance Optimized**: Smart caching and parallel installation support
 - 🔒 **Security First**: Integrity verification, sandboxed post-install scripts
-- 🌍 **Internationalization**: Supports English and Portuguese (Brazil)
-- 📊 **Progress Tracking**: Advanced progress bar with time estimates
+- 📊 **Progress Tracking**: Advanced progress bar with time estimates and speed
 - 🔄 **Smart Retry**: Adaptive backoff retry for network operations
 - ✅ **Health Checks**: Comprehensive verification of installed tools
 - 📝 **Detailed Logging**: Complete audit trail of all operations
+- 🎯 **English Interface**: Clean, professional English-only interface
 
 ## 🖥️ Supported Operating Systems
 
@@ -200,7 +200,6 @@ Secbuild/
 ├── package-dist.ini         # Tools configuration (INI format)
 ├── tools_config.yaml        # System packages and profiles
 ├── lib/                     # Modular library
-│   ├── i18n.sh              # Internationalization
 │   ├── system.sh            # System detection & setup
 │   ├── logging.sh           # Logging system
 │   ├── cache.sh             # Caching system
@@ -208,9 +207,6 @@ Secbuild/
 │   ├── config.sh            # Configuration management
 │   ├── install.sh           # Installation logic
 │   └── ui.sh                # User interface
-└── locales/                 # Translation files
-    ├── en_US.lang
-    └── pt_BR.lang
 ```
 
 ## 🔧 Advanced Features
@@ -246,7 +242,7 @@ The improved progress bar shows:
 - **Progress Bar**: Color-coded visual indicator
 - **Current/Total**: Items processed
 - **Tool Name**: Currently processing
-- **Elapsed Time**: Time since start
+- **Elapsed Time**: Time since start (formatted as hh:mm:ss or mm:ss)
 - **Estimated Remaining**: Based on average speed
 - **Speed**: Items per minute
 
@@ -254,6 +250,8 @@ Example output:
 ```
 [ 80%] [████████████████░░░░] (80/100) nmap [2m30s / 3m10s] [32/min]
 ```
+
+**Note**: Verbose mode (`-v` or `--verbose`) shows additional initialization messages for better debugging.
 
 ## 📝 Logging
 
@@ -309,14 +307,14 @@ nano ~/.secbuild/config/secbuild.conf
 ### Environment Variables
 
 ```bash
-# Set language
-export SECBUILD_LANG=en_US  # or pt_BR
-
 # Set work directory
 export WORK_DIR=/custom/path
 
 # Disable latest release installation
 export USE_LATEST_RELEASE=0
+
+# Enable verbose mode
+export VERBOSE_MODE=1
 ```
 
 ## 🐛 Troubleshooting
@@ -401,7 +399,7 @@ This project is licensed under the terms specified in the LICENSE file.
 
 - **Discord**: [Join our Discord server](https://discord.gg/Z2C2CyVZFU)
 - **Issues**: [GitHub Issues](https://github.com/DonatoReis/Secbuild/issues)
-- **Documentation**: See `ANALISE_COMPLETA.md` for detailed technical documentation
+- **Documentation**: See the codebase for detailed technical documentation
 
 ## 🗺️ Roadmap
 
@@ -417,7 +415,7 @@ This project is licensed under the terms specified in the LICENSE file.
 
 - **Total Tools**: 100+
 - **Profiles**: 17
-- **Supported Languages**: 2 (EN, PT-BR)
+- **Language**: English (100% English interface)
 - **Installation Methods**: 4 (Git, Go, APT, Post-Install)
 - **Lines of Code**: 5000+
 

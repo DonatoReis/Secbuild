@@ -1,87 +1,87 @@
 #!/usr/bin/env bash
 ################################################################################
-# system.sh - Detecção e Configuração do Sistema
-# Gerencia detecção de OS, criação de diretórios, verificação de root
+# system.sh - System Detection and Configuration
+# Manages OS detection, directory creation, root verification
 ################################################################################
 
-# Detectar sistema operacional
+# Detect operating system
 detect_system() {
-    info "sys.detecting"
+    [[ $VERBOSE_MODE -eq 1 ]] && info "Detecting operating system..."
     
-    # Verificar se é Linux
+    # Check if it's Linux
     if [[ "$OSTYPE" != "linux-gnu"* ]]; then
-        warning "sys.incompatible"
-        warning "sys.detected" "$OSTYPE"
+        warning "This script only supports Linux systems (Kali/Ubuntu)"
+        warning "System detected: $OSTYPE"
         
-        # No macOS, permitir modo de teste (não instalar, apenas listar)
+        # On macOS, allow test mode (no installation, list only)
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            warning "Este script foi projetado para Linux (Kali/Ubuntu)"
-            warning "No macOS, apenas funcionalidades de listagem funcionam"
-            warning "Instalação de ferramentas requer Linux"
+            warning "This script is designed for Linux (Kali/Ubuntu)"
+            warning "On macOS, only listing features work"
+            warning "Tool installation requires Linux"
             
-            # Definir variáveis para modo de teste
+            # Set variables for test mode
             DISTRO="darwin"
             PKG_MANAGER="none"
             
-            # Não sair, apenas avisar
+            # Don't exit, just warn
             return 0
         fi
         
-        # Para outros sistemas não-Linux, sair
-        error "Sistema não suportado: $OSTYPE"
+        # For other non-Linux systems, exit
+        error "Unsupported system: $OSTYPE"
         exit 1
     fi
     
-    # Detectar distribuição Linux
+    # Detect Linux distribution
     if [[ -f /etc/os-release ]]; then
         . /etc/os-release
         DISTRO="${ID:-unknown}"
-        debug "sys.detected" "$DISTRO"
+        debug "System detected: $DISTRO"
         
-        # Verificar compatibilidade
+        # Check compatibility
         case "$DISTRO" in
             kali|ubuntu|debian)
-                success "sys.compatible" "$DISTRO"
+                [[ $VERBOSE_MODE -eq 1 ]] && success "Compatible system detected: $DISTRO"
                 ;;
             *)
-                warning "sys.incompatible" "$DISTRO"
+                warning "This script only supports Linux systems (Kali/Ubuntu)"
                 if [[ $INTERACTIVE_MODE -eq 1 ]]; then
-                    read -p "$(t 'sys.continue' 'Deseja continuar mesmo assim? (s/N): ')" -n 1 -r
+                    read -p "Do you want to continue anyway? (y/N): " -n 1 -r
                     echo
-                    if [[ ! $REPLY =~ ^[Ss]$ ]]; then
+                    if [[ ! $REPLY =~ ^[YySs]$ ]]; then
                         exit 1
                     fi
                 fi
                 ;;
         esac
     else
-        error "sys.detection_failed"
+        error "Could not detect Linux distribution"
         exit 1
     fi
     
-    # Detectar gerenciador de pacotes
+    # Detect package manager
     if command -v apt-get &>/dev/null; then
         PKG_MANAGER="apt"
-        debug "sys.pkg_manager" "APT"
+        debug "Package manager: APT"
     else
-        # No macOS, não há apt-get, mas não é erro fatal se for modo de teste
+        # On macOS, there's no apt-get, but it's not a fatal error if in test mode
         if [[ "$DISTRO" == "darwin" ]]; then
             PKG_MANAGER="none"
-            warning "APT não disponível no macOS (modo de teste)"
+            warning "APT not available on macOS (test mode)"
         else
-            error "sys.apt_not_found"
+            error "APT not found. This script requires APT (Kali/Ubuntu)"
             exit 1
         fi
     fi
     
-    success "sys.system" "$DISTRO" "$PKG_MANAGER"
+    [[ $VERBOSE_MODE -eq 1 ]] && success "System: $DISTRO | Manager: $PKG_MANAGER"
 }
 
-# Verificar se está executando como root
+# Check if running as root
 check_root() {
-    # No macOS, permitir comandos de listagem sem root
+    # On macOS, allow listing commands without root
     if [[ "${OSTYPE:-}" == "darwin"* ]]; then
-        # Verificar argumentos passados para ver se é comando de listagem
+        # Check passed arguments to see if it's a listing command
         local is_list_cmd=0
         for arg in "$@"; do
             if [[ "$arg" == "-l" ]] || [[ "$arg" == "--list" ]] || [[ "$arg" == "--list-profiles" ]] || [[ "$arg" == "-h" ]] || [[ "$arg" == "--help" ]]; then
@@ -91,21 +91,21 @@ check_root() {
         done
         
         if [[ $is_list_cmd -eq 1 ]]; then
-            # Comandos de listagem não precisam de root
+            # Listing commands don't need root
             return 0
         fi
     fi
     
     if [[ $EUID -ne 0 ]]; then
-        error "root.required"
-        info "root.usage" "$SCRIPT_NAME"
+        error "This script must be run as root!"
+        info "Use: sudo $SCRIPT_NAME"
         exit 1
     fi
 }
 
-# Criar estrutura de diretórios
+# Create directory structure
 create_directories() {
-    info "dir.creating"
+    [[ $VERBOSE_MODE -eq 1 ]] && info "Creating directory structure..."
     local dirs=(
         "$WORK_DIR"
         "$SRC_DIR"
@@ -119,28 +119,28 @@ create_directories() {
     for dir in "${dirs[@]}"; do
         if [[ ! -d "$dir" ]]; then
             mkdir -p "$dir" || {
-                error "dir.failed" "$dir"
+                error "Failed to create directory: $dir"
                 exit 1
             }
-            debug "dir.created" "$dir"
+            debug "Directory created: $dir"
         fi
     done
     
-    # Garantir BIN_DIR no PATH
+    # Ensure BIN_DIR is in PATH
     case ":$PATH:" in
         *":$BIN_DIR:"*) 
-            debug "BIN_DIR já está no PATH"
+            debug "BIN_DIR is already in PATH"
             ;;
         *) 
             export PATH="$BIN_DIR:$PATH"
-            debug "BIN_DIR adicionado ao PATH"
+            debug "BIN_DIR added to PATH"
             ;;
     esac
     
-    success "dir.structure"
+    [[ $VERBOSE_MODE -eq 1 ]] && success "Directory structure created"
 }
 
-# Configurar cores do terminal
+# Configure terminal colors
 setup_colors() {
     if [[ -t 1 ]] && command -v tput &>/dev/null; then
         BOLD="$(tput bold)"

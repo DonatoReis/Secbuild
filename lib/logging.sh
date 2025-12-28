@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 ################################################################################
-# logging.sh - Sistema de Logging Avançado
-# Fornece funções para logging estruturado com níveis e cores
+# logging.sh - Advanced Logging System
+# Provides functions for structured logging with levels and colors
 ################################################################################
 
-# Inicializar sistema de logging
+# Initialize logging system
 init_logging() {
-    # Garantir que diretório de logs existe
+    # Ensure log directory exists
     mkdir -p "$LOG_DIR" 2>/dev/null || true
     
-    # Criar arquivos de log se não existirem
+    # Create log files if they don't exist
     : > "$LOG_FILE" 2>/dev/null || true
     : > "$ERROR_LOG" 2>/dev/null || true
 }
 
-# Função principal de logging
+# Main logging function
 log() {
     local level="$1"
     shift
@@ -22,16 +22,16 @@ log() {
     local timestamp
     timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
     
-    # Garantir que os caminhos existem antes de gravar
+    # Ensure paths exist before writing
     mkdir -p "$LOG_DIR" 2>/dev/null || true
     
-    # Log para arquivo
+    # Log to file
     echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
     
-    # Log de erros específico
+    # Specific error log
     [[ "$level" == "ERROR" ]] && echo "[$timestamp] $message" >> "$ERROR_LOG"
     
-    # Output no terminal (se não silencioso)
+    # Output to terminal (if not silent)
     if [[ $SILENT_MODE -eq 0 ]]; then
         case "$level" in
             ERROR)   echo -e "${RED}[✗]${RESET} $message" >&2 ;;
@@ -44,111 +44,23 @@ log() {
     fi
 }
 
-# Funções de conveniência
+# Convenience functions
 error() { 
-    # Verificar se traduções estão disponíveis e função t existe
-    set +u
-    local has_i18n=0
-    local array_size=0
-    
-    # Verificar tamanho do array de forma segura
-    if [[ -v I18N_STRINGS[@] ]] 2>/dev/null; then
-        array_size=${#I18N_STRINGS[@]}
-    fi
-    
-    if command -v t &>/dev/null && [[ $array_size -gt 0 ]]; then
-        has_i18n=1
-    fi
-    set -u
-    
-    if [[ $has_i18n -eq 1 ]]; then
-        log "ERROR" "$(t "$@")"
-    else
-        log "ERROR" "$*"
-    fi
+    log "ERROR" "$*"
 }
 
 success() { 
-    set +u
-    local has_i18n=0
-    local array_size=0
-    
-    if [[ -v I18N_STRINGS[@] ]] 2>/dev/null; then
-        array_size=${#I18N_STRINGS[@]}
-    fi
-    
-    if command -v t &>/dev/null && [[ $array_size -gt 0 ]]; then
-        has_i18n=1
-    fi
-    set -u
-    
-    if [[ $has_i18n -eq 1 ]]; then
-        log "SUCCESS" "$(t "$@")"
-    else
-        log "SUCCESS" "$*"
-    fi
+    log "SUCCESS" "$*"
 }
 
 warning() { 
-    set +u
-    local has_i18n=0
-    local array_size=0
-    
-    if [[ -v I18N_STRINGS[@] ]] 2>/dev/null; then
-        array_size=${#I18N_STRINGS[@]}
-    fi
-    
-    if command -v t &>/dev/null && [[ $array_size -gt 0 ]]; then
-        has_i18n=1
-    fi
-    set -u
-    
-    if [[ $has_i18n -eq 1 ]]; then
-        log "WARNING" "$(t "$@")"
-    else
-        log "WARNING" "$*"
-    fi
+    log "WARNING" "$*"
 }
 
 info() { 
-    set +u
-    local has_i18n=0
-    local array_size=0
-    
-    if [[ -v I18N_STRINGS[@] ]] 2>/dev/null; then
-        array_size=${#I18N_STRINGS[@]}
-    fi
-    
-    if command -v t &>/dev/null && [[ $array_size -gt 0 ]]; then
-        has_i18n=1
-    fi
-    set -u
-    
-    if [[ $has_i18n -eq 1 ]]; then
-        log "INFO" "$(t "$@")"
-    else
-        log "INFO" "$*"
-    fi
+    log "INFO" "$*"
 }
 
 debug() { 
-    set +u
-    local has_i18n=0
-    local array_size=0
-    
-    if [[ -v I18N_STRINGS[@] ]] 2>/dev/null; then
-        array_size=${#I18N_STRINGS[@]}
-    fi
-    
-    if command -v t &>/dev/null && [[ $array_size -gt 0 ]]; then
-        has_i18n=1
-    fi
-    set -u
-    
-    if [[ $has_i18n -eq 1 ]]; then
-        log "DEBUG" "$(t "$@")"
-    else
-        log "DEBUG" "$*"
-    fi
+    log "DEBUG" "$*"
 }
-
