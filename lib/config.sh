@@ -176,12 +176,19 @@ parse_package_ini() {
     local tool_count="${#TOOLS_REGISTRY[@]}"
     [[ $VERBOSE_MODE -eq 1 ]] && success "Configuration processed: $tool_count tools available"
     
-    # Debug: list loaded tools
+    # Debug: list loaded tools in columns
     if [[ $VERBOSE_MODE -eq 1 ]]; then
         debug "Loaded tools:"
-        for tool in "${!TOOLS_REGISTRY[@]}"; do
-            debug "  - $tool"
-        done
+        local count=0
+        local tools_sorted
+        tools_sorted=$(printf '%s\n' "${!TOOLS_REGISTRY[@]}" | sort)
+        while IFS= read -r tool; do
+            [[ -z "$tool" ]] && continue
+            printf "  %-25s" "$tool"
+            ((count++))
+            [[ $((count % 3)) -eq 0 ]] && echo
+        done <<< "$tools_sorted"
+        [[ $((count % 3)) -ne 0 ]] && echo
     fi
 }
 

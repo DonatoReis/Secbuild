@@ -842,10 +842,18 @@ execute_post_install() {
     fi
     
     local safe_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-    if env -i PATH="$safe_path" HOME="$HOME" USER="$USER" bash -euo pipefail -c "$commands" >>"$LOG_FILE" 2>&1; then
+    # Use a temporary script file to avoid quote escaping issues
+    local temp_script
+    temp_script=$(mktemp)
+    echo "$commands" > "$temp_script"
+    chmod +x "$temp_script"
+    
+    if env -i PATH="$safe_path" HOME="$HOME" USER="$USER" bash -euo pipefail "$temp_script" >>"$LOG_FILE" 2>&1; then
+        rm -f "$temp_script"
         debug "Post-installation completed for $tool_name"
         return 0
     else
+        rm -f "$temp_script"
         error "Post-installation failed for $tool_name"
         return 1
     fi
