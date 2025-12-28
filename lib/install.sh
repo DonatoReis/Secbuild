@@ -8,27 +8,35 @@
 # FUNÇÕES AUXILIARES DE SEGURANÇA E PERFORMANCE
 # ==============================================================================
 
-# Cache de comandos para evitar múltiplas chamadas command -v
-declare -A COMMAND_CACHE
+# Command cache to avoid multiple command -v calls
+declare -gA COMMAND_CACHE
 
 # Installation verification cache (new improvement)
-declare -A INSTALLED_CACHE
+declare -gA INSTALLED_CACHE
 
-# Verificar se comando existe (com cache)
+# Check if command exists (with cache)
 cached_command_exists() {
     local cmd="$1"
     
-    # Verificar cache primeiro
+    # Check cache first
+    set +u
     if [[ -n "${COMMAND_CACHE[$cmd]:-}" ]]; then
-        return "${COMMAND_CACHE[$cmd]}"
+        local cached_result="${COMMAND_CACHE[$cmd]}"
+        set -u
+        return "$cached_result"
     fi
+    set -u
     
-    # Verificar comando
+    # Check command
     if command -v "$cmd" &>/dev/null 2>&1; then
+        set +u
         COMMAND_CACHE[$cmd]=0
+        set -u
         return 0
     else
+        set +u
         COMMAND_CACHE[$cmd]=1
+        set -u
         return 1
     fi
 }
@@ -862,10 +870,15 @@ is_installed_tool() {
     local tool="$1"
     
     # NEW IMPROVEMENT: Check installation cache first (much faster)
+    # Use set +u temporarily to safely check array
+    set +u
     if [[ -n "${INSTALLED_CACHE[$tool]:-}" ]]; then
         # Cache hit! Return immediately (0.001s vs 0.1-0.5s)
-        return "${INSTALLED_CACHE[$tool]}"
+        local cached_result="${INSTALLED_CACHE[$tool]}"
+        set -u
+        return "$cached_result"
     fi
+    set -u
     
     # Cache miss: check for real
     local binary
@@ -883,11 +896,14 @@ is_installed_tool() {
     done < <(binary_names_for_tool "$tool")
     
     # Save result to cache for next verifications
+    set +u
     if [[ $found -eq 1 ]]; then
         INSTALLED_CACHE[$tool]=0
+        set -u
         return 0
     else
         INSTALLED_CACHE[$tool]=1
+        set -u
         return 1
     fi
 }

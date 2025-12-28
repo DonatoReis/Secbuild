@@ -429,7 +429,7 @@ menu_install_all() {
     warning "This may take a long time!"
     echo
     read -rp "Do you want to continue? (y/N): " confirm
-    [[ "$confirm" =~ ^[Ss]$ ]] && install_all_tools
+    [[ "$confirm" =~ ^[YySs]$ ]] && install_all_tools
     echo
     read -rp "Press ENTER to continue..."
 }
@@ -567,7 +567,7 @@ menu_install_profile() {
     echo
     read -rp "Do you want to continue? (y/N): " confirm
     
-    if [[ "$confirm" =~ ^[Ss]$ ]]; then
+    if [[ "$confirm" =~ ^[YySs]$ ]]; then
         install_profile "$profile"
     else
         info "Installation cancelled"
