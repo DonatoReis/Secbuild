@@ -535,12 +535,18 @@ install_go_tool_with_retry() {
     # Go optimization flags
     local go_flags="-ldflags=-s -w -trimpath"
     
+    # Check if package already has a version specifier (@version)
+    local package_with_version="$package"
+    if [[ "$package" != *@* ]]; then
+        package_with_version="${package}@latest"
+    fi
+    
     # Try methods in order of preference with adaptive retry
     local methods=(
-        "GOARCH=$goarch go install $go_flags ${package}@latest"
-        "GOARCH=$goarch go install ${package}@latest"
-        "go get -u ${package}"
-        "GO111MODULE=on go get ${package}"
+        "GOARCH=$goarch go install $go_flags $package_with_version"
+        "GOARCH=$goarch go install $package_with_version"
+        "go get -u $package"
+        "GO111MODULE=on go get $package"
     )
     
     for method in "${methods[@]}"; do
