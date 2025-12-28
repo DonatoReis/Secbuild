@@ -818,6 +818,137 @@ install_with_go() {
     fi
 }
 
+# Install Rust tool via Cargo (from Git repository)
+# Supports: standard projects, workspaces, subdirectories, multiple binaries
+install_with_cargo() {
+    local repo_url="$1"
+    local tool_name="$2"
+    local binary_name="${3:-$tool_name}"
+    local build_dir="${4:-}"  # Optional: subdirectory with Cargo.toml
+    
+    debug "Installing $tool_name via Cargo from: $repo_url"
+    
+    if [[ $DRY_RUN -eq 1 ]]; then
+        info "Would install via Cargo: $repo_url"
+        return 0
+    fi
+    
+    # Check if cargo is installed
+    if ! command -v cargo &>/dev/null; then
+        error "Cargo (Rust) is not installed. Please install Rust first."
+        return 1
+    fi
+    
+    local temp_dir
+    temp_dir=$(mktemp -d)
+    
+    # Clone repository
+    if ! git clone --depth 1 "$repo_url" "$temp_dir" >>"$LOG_FILE" 2>&1; then
+        error "Failed to clone $repo_url"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+    
+    # Determine build directory (handle subdirectories and workspaces)
+    local cargo_dir="$temp_dir"
+    if [[ -n "$build_dir" ]]; then
+        cargo_dir="$temp_dir/$build_dir"
+    elif [[ ! -f "$temp_dir/Cargo.toml" ]]; then
+        # Try to find Cargo.toml in subdirectories
+        local found_toml
+        found_toml=$(find "$temp_dir" -maxdepth 2 -name "Cargo.toml" -type f 2>/dev/null | head -1)
+        if [[ -n "$found_toml" ]]; then
+            cargo_dir=$(dirname "$found_toml")
+            debug "Found Cargo.toml in subdirectory: $cargo_dir"
+        fi
+    fi
+    
+    if [[ ! -f "$cargo_dir/Cargo.toml" ]]; then
+        error "Cargo.toml not found in repository"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+    
+    # Try to detect binary name from Cargo.toml if not specified
+    if [[ "$binary_name" == "$tool_name" ]]; then
+        local detected_name
+        detected_name=$(grep -m 1 "^name\s*=" "$cargo_dir/Cargo.toml" 2>/dev/null | sed 's/.*=\s*"\([^"]*\)".*/\1/' | tr -d '[:space:]')
+        if [[ -n "$detected_name" ]]; then
+            binary_name="$detected_name"
+            debug "Detected binary name from Cargo.toml: $binary_name"
+        fi
+    fi
+    
+    # Build with cargo
+    info "Building $tool_name with Cargo (this may take a while)..."
+    local build_cmd="cargo build --release"
+    
+    # Check if we need to build a specific binary (for projects with multiple binaries)
+    if cargo metadata --no-deps --format-version 1 --manifest-path "$cargo_dir/Cargo.toml" 2>/dev/null | grep -q "\"$binary_name\""; then
+        build_cmd="cargo build --release --bin $binary_name"
+        debug "Building specific binary: $binary_name"
+    fi
+    
+    if (cd "$cargo_dir" && $build_cmd >>"$LOG_FILE" 2>&1); then
+        # Find the binary - try multiple strategies
+        local built_binary=""
+        
+        # Strategy 1: Look for exact binary name
+        built_binary=$(find "$cargo_dir/target/release" -type f -executable -name "$binary_name" 2>/dev/null | head -1)
+        
+        # Strategy 2: Look for tool_name (lowercase)
+        if [[ -z "$built_binary" ]]; then
+            built_binary=$(find "$cargo_dir/target/release" -type f -executable -name "${tool_name,,}" 2>/dev/null | head -1)
+        fi
+        
+        # Strategy 3: Look for any executable matching the pattern
+        if [[ -z "$built_binary" ]]; then
+            built_binary=$(find "$cargo_dir/target/release" -type f -executable \( -name "*${tool_name}*" -o -name "*${binary_name}*" \) 2>/dev/null | head -1)
+        fi
+        
+        # Strategy 4: Find any executable (last resort)
+        if [[ -z "$built_binary" ]]; then
+            built_binary=$(find "$cargo_dir/target/release" -type f -executable 2>/dev/null | grep -v ".so" | grep -v ".dylib" | head -1)
+        fi
+        
+        if [[ -n "$built_binary" && -f "$built_binary" ]]; then
+            local final_binary_name
+            final_binary_name=$(basename "$built_binary")
+            
+            # Copy to bin directory
+            cp "$built_binary" "$BIN_DIR/$final_binary_name" 2>/dev/null || {
+                sudo cp "$built_binary" "$BIN_DIR/$final_binary_name" 2>/dev/null || {
+                    error "Failed to copy binary to $BIN_DIR"
+                    rm -rf "$temp_dir"
+                    return 1
+                }
+            }
+            chmod +x "$BIN_DIR/$final_binary_name"
+            
+            # Create symlink with tool_name if binary name is different
+            if [[ "$final_binary_name" != "$tool_name" ]]; then
+                ln -sf "$BIN_DIR/$final_binary_name" "$BIN_DIR/$tool_name" 2>/dev/null || {
+                    sudo ln -sf "$BIN_DIR/$final_binary_name" "$BIN_DIR/$tool_name" 2>/dev/null || true
+                }
+            fi
+            
+            success "$tool_name built and installed successfully (binary: $final_binary_name)"
+            rm -rf "$temp_dir"
+            return 0
+        else
+            error "Built binary not found for $tool_name"
+            debug "Searched in: $cargo_dir/target/release"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+    else
+        error "Cargo build failed for $tool_name"
+        debug "Check build logs in: $LOG_FILE"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+}
+
 # Executar post_install
 execute_post_install() {
     local commands="$1"
@@ -988,7 +1119,13 @@ install_single_tool() {
     fi
     
     # Install tool
-    if [[ -n "$url" ]]; then
+    # Check if post_install is cargo build first (skip normal git install)
+    local is_cargo_build=0
+    if [[ -n "$post_install" ]] && [[ "$post_install" =~ cargo[[:space:]]build ]]; then
+        is_cargo_build=1
+    fi
+    
+    if [[ -n "$url" ]] && [[ $is_cargo_build -eq 0 ]]; then
         install_from_git "$url" "$script" "$tool_name" && install_success=1
     fi
     
@@ -997,6 +1134,13 @@ install_single_tool() {
             local go_pkg="${post_install#*go install }"
             go_pkg="${go_pkg%% *}"
             install_with_go "$go_pkg" "$tool_name" && install_success=1
+        elif [[ "$post_install" =~ cargo[[:space:]]build ]]; then
+            # Detect cargo build - install from Git URL if available
+            if [[ -n "$url" ]]; then
+                install_with_cargo "$url" "$tool_name" && install_success=1
+            else
+                error "Cargo build requested but no Git URL provided for $tool_name"
+            fi
         else
             execute_post_install "$post_install" "$tool_name" && install_success=1
         fi

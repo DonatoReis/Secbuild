@@ -109,7 +109,7 @@ parse_package_ini() {
             # Save previous tool if exists
             if [[ -n "$current_tool" ]]; then
                 TOOLS_REGISTRY["$current_tool"]="$url|$script|$depends|$post_install"
-                debug "Tool registered: $current_tool"
+                # Removed verbose "Tool registered" messages for cleaner output
             fi
             
             # Start new tool
@@ -170,7 +170,7 @@ parse_package_ini() {
     # Save last tool
     if [[ -n "$current_tool" ]]; then
         TOOLS_REGISTRY["$current_tool"]="$url|$script|$depends|$post_install"
-        debug "Tool registered: $current_tool"
+        # Removed verbose "Tool registered" messages for cleaner output
     fi
     
     local tool_count="${#TOOLS_REGISTRY[@]}"
