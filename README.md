@@ -1,137 +1,430 @@
-# Secbuild
+# SecBuild
 
-<p align="center" dir="auto">
-  <a target="_blank" rel="noopener noreferrer" href="https://imgbb.com/"><img src="https://i.ibb.co/RTQDVz15/upscalemedia-transformed.png" alt="secbuild-transformed" border="0" height="540" style="max-width: 100%;"></a>
+<p align="center">
+  <img src="https://i.ibb.co/RTQDVz15/upscalemedia-transformed.png" alt="SecBuild Logo" height="200">
   <br>
-  <strong>Secbuild - An automation tool to install the most popular tools for bug bounty or pentesting</strong> 
+  <strong>Automated Security Tools Installer for Bug Bounty & Pentesting</strong>
   <br><br>
-  <strong>Recode The Copyright Is Not Make You A Coder</strong>
-</p>  
-  
-<div>
-  <p align="center" dir="auto">
-  <a href="https://discord.gg/Z2C2CyVZFU" target="_blank"><img src="https://img.shields.io/badge/-Discord-7289DA?style=for-the-badge&logo=discord&logoColor=39ff14&logoColor=white&color=black" target="_blank"></a>
-  </p>
-</div>
+  <a href="https://discord.gg/Z2C2CyVZFU" target="_blank">
+    <img src="https://img.shields.io/badge/-Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white&color=black" alt="Discord">
+  </a>
+</p>
 
-## An automation tool to install the most popular tools for bug bounty or pentesting! This will save you 90% of your time when setting up your machine to work.
-It already configures all the tools for you to work, you won't need to configure it manually.
+## 🎯 Overview
 
+**SecBuild** is a robust, modular automation tool designed to install and manage 100+ popular security and pentesting tools on Linux systems. It saves you up to 90% of the time typically spent setting up your security testing environment by automatically handling dependencies, configurations, and installations.
 
-> Status: Developing ⚠️
+### ✨ Key Features
 
+- 🚀 **Automated Installation**: Installs 100+ security tools with a single command
+- 📦 **Profile-Based Installation**: Install tools by category (recon, web, dns, etc.)
+- ⚡ **Performance Optimized**: Smart caching and parallel installation support
+- 🔒 **Security First**: Integrity verification, sandboxed post-install scripts
+- 🌍 **Internationalization**: Supports English and Portuguese (Brazil)
+- 📊 **Progress Tracking**: Advanced progress bar with time estimates
+- 🔄 **Smart Retry**: Adaptive backoff retry for network operations
+- ✅ **Health Checks**: Comprehensive verification of installed tools
+- 📝 **Detailed Logging**: Complete audit trail of all operations
 
-### Tool updates every linux directory and all dependencies needed to work
-   - tor, argparse, pyrit, requests, proxychains4, aptitude, Seclists, synaptic, brave, hashcat, docker.io etc...
+## 🖥️ Supported Operating Systems
 
-### Script to install the most popular tools used when looking for vulnerabilities for a Bug bounty or Pentest bounty program.
+| OS | Supported | Easy Install | Tested |
+|----|-----------|--------------|--------|
+| **Kali Linux** | ✅ Yes | ✅ Yes | Kali 2024.1+ |
+| **Ubuntu** | ✅ Yes | ✅ Yes | Ubuntu 20.04+ |
+| **Debian** | ⚠️ Partial | ⚠️ Partial | Debian 10+ |
+| **macOS** | ⚠️ Limited | ❌ No | List mode only |
 
-<h3>Usage</h3>
+## 📋 Requirements
 
+- **Bash 4.0+** (for associative arrays)
+- **Root privileges** (for installation, not required for listing)
+- **Internet connection** (for downloading tools)
+- **Basic system packages**: `curl`, `wget`, `git`
 
-```js 
-Example Usage:
-secbuild [-f] [-l] [tool] [-h]
+## 🚀 Quick Start
 
-DESCRIPTION
-  Secbuild is a based script for automatize installation
+### Installation
 
-OPTIONS
-  General options
-    -h,--help
-    -l,--list
-    -v,--version
-    -f,--force-update
+```bash
+# Clone the repository
+git clone https://github.com/DonatoReis/Secbuild.git
+cd Secbuild
 
-Mode display:
-    secbuild
-
-Examples:
-    secbuild.sh -f
-    secbuild.sh amass
-
+# Run the installer (interactive mode)
+sudo ./secbuild.sh
 ```
 
-## Operating Systems Supported
-| OS         | Supported | Easy Install  | Tested        | 
-|------------|-----------|---------------|---------------|
-| Ubuntu     |    Yes    | Yes           | Ubuntu 22.04  |
-| Kali       |    Yes    | Yes           | Kali 2024.1   |
-| Debian     |    No     | No            | No            |
-| Arch Linux |    No     | No            | No            |
+### Basic Usage
 
-<p align="center" dir="auto"><strong>Tools used - You must need to install these tools to use this script</strong><br></p>
+```bash
+# Interactive menu mode
+sudo ./secbuild.sh
 
-List1|List2|List3|List4|List5|List6|List7|List8
------|-----|-----|-----|-----|-----|-----|-----
-<a href="https://github.com/projectdiscovery/subfinder"><code>subfinder</code></a>|<a href="https://github.com/aboul3la/Sublist3r"><code>sublist3r</code></a>|<a href="https://github.com/projectdiscovery/dnsx"><code>dnsx</code></a>|<a href="https://github.com/tomnomnom/assetfinder"><code>assetfinder</code></a>|<a href="https://github.com/projectdiscovery/httpx"><code>httpx</code></a>|<a href="https://github.com/Emoe/kxss"><code>kxss</code></a>|<a href="https://github.com/tomnomnom/qsreplace"><code>qsreplace</code></a>|<a href="https://github.com/projectdiscovery/nuclei"><code>nuclei</code></a>|
-<a href="https://github.com/hahwul/dalfox"><code>dalfox</code></a>|<a href="https://github.com/tomnomnom/anew"><code>anew</code></a>|<a href="https://github.com/projectdiscovery/notify"><code>notify</code></a>|<a href="https://github.com/michenriksen/aquatone"><code>aquatone</code></a>|<a href="https://github.com/ameenmaali/urldedupe"><code>urldedupe</code></a>|<a href="https://github.com/OWASP/Amass"><code>amass</code></a>|<a href="https://github.com/bp0lr/gauplus"><code>gauplus</code></a>|<a href="https://github.com/dwisiswant0/crlfuzz"><code>crlfuzz</code></a>|
-<a href="https://github.com/s0md3v/uro"><code>uro</code></a>|<a href="https://github.com/projectdiscovery/naabu"><code>naabu</code></a>|<a href="https://github.com/Cgboal/SonarSearch"><code>crobat</code></a>|<a href="https://github.com/OJ/gobuster"><code>gobuster</code></a>|<a href="https://github.com/jaeles-project/gospider"><code>gospider</code></a>|<a href="https://github.com/tomnomnom/waybackurls"><code>waybackurls</code></a>|<a href="https://github.com/maurosoria/dirsearch"><code>Dirsearch</code></a>|<a href="https://github.com/s0md3v/XSStrike"><code>Xsstrike</code></a>|
-<a href="https://github.com/guelfoweb/knock"><code>Knock</code></a>|<a href="https://github.com/khalilbijjou/WAFNinja"><code>Wafninja</code></a>|<a href="https://github.com/darryllane/Bluto"><code>Bluto</code></a>|<a href="https://github.com/HACK3RY2J/Anon-SMS"><code>Anon-SMS</code></a>|<a href="https://github.com/NoorQureshi/WPSeku-1"><code>WPSeku</code></a>|<a href="https://github.com/RustScan/RustScan"><code>Rustscan</code></a>|<a href="https://github.com/eth0izzle/the-endorser"><code>The-endorser</code></a>|<a href="https://www.kali.org/tools/whatweb/"><code>Whatweb</code></a>|
-<a href="https://github.com/sundowndev/phoneinfoga"><code>Phoneinfoga</code></a>|<a href="https://github.com/sqlmapproject/sqlmap"><code>Sqlmap-dev</code></a>|<a href="https://github.com/d093w1z/sayhello"><code>Sayhello</code></a>|<a href="https://github.com/twintproject"><code>Twintproject</code></a>|<a href="https://github.com/wpscanteam/wpscan"><code>Wpscan</code></a>|<a href="https://github.com/htr-tech/zphisher"><code>Zphisher</code></a>|<a href="https://github.com/behindthefirewalls/Parsero"><code>Parsero</code></a>|<a href="https://github.com/UndeadSec/SocialFish"><code>SocialFish</code></a>|
-<a href="https://github.com/Datalux/Osintgram"><code>Osintgram</code></a>|<a href="https://github.com/blechschmidt/massdns"><code>Massdns</code></a>|<a href="https://github.com/arthaud/git-dumper"><code>Git-dumper</code></a>|<a href="https://github.com/yassineaboukir/Asnlookup"><code>Asnlookup</code></a>|<a href="https://github.com/sherlock-project/sherlock"><code>Sherlok</code></a>|<a href="https://github.com/tomnomnom/unfurl"><code>Unfurl</code></a>|<a href="https://github.com/hangetzzu/saycheese"><code>Saycheese</code></a>|<a href="https://github.com/tomnomnom/httprobe"><code>Httprobe</code></a>|
-<a href="https://github.com/inconshreveable/ngrok"><code>Ngrok</code></a>|<a href="https://github.com/xmendez/wfuzz"><code>Wfuzz</code></a>|<a href="https://github.com/laramies/theHarvester"><code>TheHarvester</code></a>|<a href="https://brave-browser-apt-release.s3.brave.com"><code>Brave</code></a>|<a href="https://github.com/devanshbatham/ParamSpider"><code>ParamSpider</code></a>|<a href="https://github.com/lc/gau"><code>Gau</code></a>|<a href="https://github.com/m4ll0k/takeover"><code>Takeover</code></a>|<a href="https://github.com/m4ll0k/Infoga"><code>Infoga</code></a>|
-<a href="https://github.com/Und3rf10w/kali-anonsurf"><code>Anonsurf</code></a>|<a href="https://github.com/internetwache/GitTools"><code>Gittools</code></a>|<a href="https://github.com/droope/droopescan"><code>Droopescan</code></a>|<a href="https://github.com/davidtavarez/pwndb"><code>Pwndb</code></a>|<a href="https://github.com/OWASP/joomscan"><code>Joomscan</code></a>|<a href="https://github.com/nabla-c0d3/sslyze"><code>Sslyze</code></a>|<a href="https://github.com/rbsec/sslscan"><code>Sslscan</code></a>|<a href="https://github.com/hakluke/hakrawler"><code>Hakrawler</code></a>|
-<a href="https://github.com/hahwul/a2sv"><code>A2SV</code></a>|<a href="https://github.com/D4Vinci/Twitter-Info"><code>Twitter-info</code></a>|<a href="https://github.com/ffuf/ffuf"><code>Ffuf</code></a>|<a href="https://github.com/epi052/feroxbuster"><code>Feroxbuster</code></a>|<a href="https://github.com/assetnote/kiterunner"><code>KiteRunner</code></a>|<a href="https://github.com/opsdisk/metagoofil"><code>Metagoofil</code></a>|<a href="https://github.com/thewhiteh4t/seeker"><code>Seeker</code></a>|<a href="https://github.com/hacker3983/pyrit-installerr"><code>Pyrit</code></a>|
-<a href="https://github.com/maaaaz/webscreenshot"><code>Webscreenshot</code></a>|<a href="https://github.com/Edu4rdSHL/unimap"><code>Unimap</code></a>|<a href="https://github.com/jbq/ufw"><code>Ufw</code></a>|<a href="https://github.com/drwetter/testssl.sh"><code>Testssl</code></a>|<a href="https://github.com/lc/subjs"><code>Subjs</code></a>|<a href="https://github.com/haccer/subjack"><code>Subjack</code></a>|<a href="https://github.com/pry0cc/soxy"><code>Soxy</code></a>|<a href="https://github.com/kpcyrd/sn0int"><code>Sn0int</code></a>|
-<a href="https://github.com/projectdiscovery/shuffledns"><code>Shuffledns</code></a>|<a href="https://github.com/nccgroup/scrying"><code>Scrying</code></a>|<a href="https://github.com/sa7mon/S3Scanner"><code>S3Scanner</code></a>|<a href="https://github.com/d3mondev/puredns"><code>Puredns</code></a>|<a href="https://github.com/ariya/phantomjs"><code>phantomjs</code></a>|<a href="https://github.com/devanshbatham/OpenRedireX"><code>OpenRedireX</code></a>|<a href="https://github.com/tomnomnom/meg"><code>meg</code></a>|<a href="https://github.com/medusajs/medusa"><code>medusa</code></a>|
-<a href="https://github.com/robertdavidgraham/masscan"><code>masscan</code></a>|<a href="https://github.com/ayoubfathi/leaky-paths"><code>leaky-paths</code></a>|<a href="https://github.com/GerbenJavado/LinkFinder"><code>LinkFinder</code></a>|<a href="https://github.com/jaeles-project/jaeles"><code>jaeles</code></a>|<a href="https://github.com/projectdiscovery/interactsh"><code>interactsh</code></a>|<a href="https://github.com/codingo/Interlace"><code>Interlace</code></a>|<a href="https://github.com/neex/http2smugl"><code>http2smugl</code></a>|<a href="https://github.com/KathanP19/Gxss"><code>Gxss</code></a>|
-<a href="https://github.com/tomnomnom/gron"><code>gron</code></a>|<a href="https://github.com/sensepost/gowitness"><code>gowitness</code></a>|<a href="https://github.com/pry0cc/gorgo"><code>gorgo</code></a>|<a href="https://github.com/gwen001/github-subdomains"><code>gitsubdomains</code></a>|<a href="https://github.com/gwen001/github-endpoints"><code>gitendpoints</code></a>|<a href="https://github.com/1ndianl33t/Gf-Patterns"><code>Gf-Patterns</code></a>|<a href="https://github.com/003random/getJS"><code>getJS</code></a>|<a href="https://github.com/Findomain/Findomain"><code>Findomain</code></a>|
-<a href="https://github.com/dylanaraps/fff"><code>fff</code></a>|<a href="https://github.com/Cgboal/exclude-cdn"><code>exclude-cdn</code></a>|<a href="https://github.com/maikthulhu/ERLPopper"><code>ERLPopper</code></a>|<a href="https://github.com/vortexau/dnsvalidator"><code>dnsvalidator</code></a>|<a href="https://github.com/darkoperator/dnsrecon"><code>dnsrecon</code></a>|<a href="https://github.com/ProjectAnte/dnsgen"><code>dnsgen</code></a>|<a href="https://github.com/codingo/DNSCewl"><code>DNSCewl</code></a>|<a href="https://github.com/M4DM0e/DirDar"><code>DirDar</code></a>|
-<a href="https://github.com/tomnomnom/concurl"><code>concurl</code></a>|<a href="https://github.com/commixproject/commix"><code>commix</code></a>|<a href="https://github.com/yghonem14/cngo"><code>cngo</code></a>|<a href="https://github.com/byt3bl33d3r/CrackMapExec"><code>CrackMapExec</code></a>|<a href="https://github.com/hakluke/haktrails"><code>haktrails</code></a>|<a href="https://github.com/s0md3v/Corsy"><code>Corsy</code></a>|<a href="https://github.com/tomnomnom/burl"><code>burl</code></a>| <a href="https://github.com/projectdiscovery/katana"><code>katana</code></a> |
-<a href="https://github.com/projectdiscovery/tlsx"><code>tlsx</code></a>|<a href="https://github.com/projectdiscovery/asnmap"><code>asnmap</code></a>|<a href="https://github.com/thewhiteh4t/pwnedOrNot"><code>PwnedOrNot</code></a>|<a href="https://github.com/mxrch/ghunt"><code>Ghunt</code></a>|<a href="https://github.com/maldevel/EmailHarvester"><code>EmailHarvester</code></a>|<a href="https://github.com/Josue87/EmailFinder"><code>Emailfinder</code></a>|<a href="https://github.com/arthaud/git-dumper"><code>Gitdumper</code></a>|<a href="https://github.com/arthaud/git-dumper"><code>Gitdumper</code></a>|
-<a href="https://github.com/dwisiswant0/cf-check"><code>Cf-check</code></a>|<a href="https://github.com/rthalley/dnspython"><code>Dnspython</code></a>|<a href="https://github.com/rthalley/dnspython"><code>Dnspython</code></a>|<a href="https://github.com/danielmiessler/SecLists"><code>SecLists</code></a>|<a href="https://github.com/janmasarik/resolvers"><code>Janmasarik</code></a>|<a href="https://github.com/d8rkmind/Pyosint"><code>pyosint</code></a>|<a href="https://github.com/Syzik/DockerRegistryGrabber"><code>DockerRegistryGrabber</code></a>|<a href="https://github.com/MatrixTM/MHDDoS"><code>MHDDoS</code></a>|
-<a href="https://github.com/D4Vinci/elpscrk"><code>Elpscrk</code></a>|<a href="https://github.com/Manisso/fsociety"><code>fsociety</code></a>|<a href="http://github.com/mzfr/liffy"><code>Liffy</code></a>|<a href="https://github.com/SpiderLabs/HostHunter"><code>HostHunter</code></a>|<a href="https://github.com/python-poetry/poetry"><code>Poetry</code></a>|<a href="https://github.com/UnaPibaGeek/ctfr"><code>Ctfr</code></a>|<a href="https://github.com/megadose/holehe"><code>holehe</code></a>|<a href="https://github.com/khast3x/h8mail"><code>h8mail</code></a>
-|<a href="https://github.com/projectdiscovery/chaos-client/"><code>Chaos-client</code></a>|<a href="https://github.com/xm1k3/cent"><code>Cent</code></a>|<a href="https://github.com/detectify/page-fetch"><code>page-fetch</code></a>|<a href="https://github.com/gmmorris/jg"><code>jg</code></a>|<a href="https://github.com/ZerBea/hcxtools"><code>hcxtools</code></a>|<a href="https://github.com/zmap/zmap"><code>zmap</code></a>|<a href="https://github.com/s0md3v/Arjun"><code>arjun</code></a>|<a href="https://github.com/soxoj/maigret"><code>maigret</code></a>
-|<a href="https://github.com/pypa/pipx"><code>pipx</code></a>|<a href="https://github.com/blark/aiodnsbrute"><code>aiodnsbrute</code></a>|<a href="https://github.com/typhoeus/typhoeus"><code>typhoeus</code></a>|<a href="https://github.com/dwisiswant0/ppfuzz"><code>ppfuzz</code></a>|
+# Install a specific tool
+sudo ./secbuild.sh -i nmap
 
-### Full installation
-#### cURL, Recommends installing in root mode
+# Install by profile (e.g., recon tools)
+sudo ./secbuild.sh --profile recon
 
-### Display mode
-```sh
-secbuild
+# List all available tools
+./secbuild.sh -l
+
+# List available profiles
+./secbuild.sh --list-profiles
+
+# Parallel installation (faster)
+sudo ./secbuild.sh -p 8
+
+# Dry-run mode (simulation, no changes)
+sudo ./secbuild.sh --dry-run
 ```
 
-#### **Installation mode with git clone**
-```sh
-git clone https://github.com/DonatoReis/Secbuild
-sudo Secbuild/secbuild.sh
+## 📖 Detailed Usage
+
+### Command-Line Options
+
+```
+Usage: sudo ./secbuild.sh [OPTIONS]
+
+Options:
+  -h, --help              Show this help message
+  -v, --verbose           Enable verbose mode (debug output)
+  -f, --force             Force update of dependencies
+  -s, --silent            Silent mode (non-interactive)
+  -l, --list              List all available tools
+  -i, --install TOOL      Install a specific tool
+  -u, --update            Update all installed tools
+  --dry-run               Simulation mode (no actual changes)
+  -p, --parallel [N]      Parallel installation (N = number of jobs, default: 4)
+  --profile NAME          Install tools from a specific profile
+  --list-profiles         List all available profiles
+  --no-latest-release     Disable latest release installation (use default branch)
 ```
 
-#### **Tools Recon DNS**
-```sh
-Dnsx:         | https://github.com/projectdiscovery/dnsx
-Massdns:      | https://github.com/blechschmidt/massdns
-Shuffledns:   | https://github.com/projectdiscovery/shuffledns
-Dnspython:    | https://github.com/rthalley/dnspython
-Aiodnsbrute:  | https://github.com/blark/aiodnsbrute
-Puredns:      | https://github.com/d3mondev/puredns
-Dnsvalidator: | https://github.com/vortexau/dnsvalidator
-DnsRecon:     | https://github.com/darkoperator/dnsrecon
-Dnsgen:       | https://github.com/ProjectAnte/dnsgen
-DNSCewl:      | https://github.com/codingo/DNSCewl
+### Examples
+
+```bash
+# Install all tools
+sudo ./secbuild.sh
+
+# Install specific tool
+sudo ./secbuild.sh -i subfinder
+
+# Install web security tools profile
+sudo ./secbuild.sh --profile web
+
+# Install with 8 parallel jobs
+sudo ./secbuild.sh -p 8 --profile bugbounty
+
+# List tools and check what's installed
+./secbuild.sh -l
+
+# Simulate installation (see what would happen)
+sudo ./secbuild.sh --dry-run --profile recon
 ```
 
-#### **Tools Recon Domains**
-```sh
-Amass:             | https://github.com/OWASP/Amass
-Subfinder:         | https://github.com/projectdiscovery/subfinder
-Sublist3r:         | https://github.com/aboul3la/Sublist3r
-Findomain:         | https://github.com/Findomain/Findomain
-Github-subdomains: | https://github.com/gwen001/github-subdomains
-Sonarsearch:       | https://github.com/cgboal/sonarsearch/
-Feroxbuster:       | https://github.com/epi052/feroxbuster
-Pyosint:           | https://github.com/d8rkmind/Pyosint
+## 🎨 Available Profiles
+
+SecBuild organizes tools into **17 predefined profiles** for easy installation:
+
+| Profile | Description | Tools Count |
+|---------|-------------|-------------|
+| **recon** | Reconnaissance and information gathering | 20+ |
+| **dns** | DNS analysis and enumeration | 10+ |
+| **subdomains** | Subdomain discovery tools | 15+ |
+| **web** | Web application security testing | 25+ |
+| **fuzzing** | Fuzzing and brute force tools | 10+ |
+| **ssl** | SSL/TLS certificate analysis | 5+ |
+| **network** | Network scanning and analysis | 10+ |
+| **osint** | Open Source Intelligence tools | 15+ |
+| **wifi** | WiFi security testing | 5+ |
+| **automation** | Test automation and orchestration | 8+ |
+| **parameters** | Parameter discovery and analysis | 10+ |
+| **takeover** | Subdomain takeover detection | 5+ |
+| **cloud** | Cloud security tools | 5+ |
+| **social** | Social engineering tools | 5+ |
+| **utilities** | Utility and helper tools | 20+ |
+| **pentest** | Complete pentesting toolkit | 30+ |
+| **bugbounty** | Essential bug bounty tools | 25+ |
+
+### Installing a Profile
+
+```bash
+# Install all web security tools
+sudo ./secbuild.sh --profile web
+
+# Install bug bounty essentials
+sudo ./secbuild.sh --profile bugbounty
+
+# Install complete pentesting toolkit
+sudo ./secbuild.sh --profile pentest
 ```
 
-#### **Tools Recon Urls**
-```sh
-Katana:      | https://github.com/projectdiscovery/katana
-Gau:         | https://github.com/lc/gau
-Gauplus:     | https://github.com/bp0lr/gauplus
-WaybackUrls: | https://github.com/tomnomnom/waybackurls
+## 🛠️ Available Tools
+
+SecBuild supports **100+ security tools**, including:
+
+### Reconnaissance & OSINT
+- `subfinder`, `findomain`, `assetfinder`, `sublist3r`
+- `theHarvester`, `infoga`, `sherlock`, `ghunt`
+- `waybackurls`, `gau`, `gauplus`, `haktrails`
+
+### Web Security
+- `nuclei`, `sqlmap`, `dalfox`, `xssstrike`
+- `paramspider`, `arjun`, `gxss`, `kxss`
+- `dirsearch`, `gobuster`, `feroxbuster`, `ffuf`
+
+### DNS Tools
+- `dnsx`, `massdns`, `shuffledns`, `puredns`
+- `dnsrecon`, `dnsvalidator`, `dnsgen`
+
+### Network Scanning
+- `naabu`, `rustscan`, `masscan`, `unimap`
+- `httpx`, `httprobe`, `tlsx`
+
+### And many more...
+
+See the complete list with:
+```bash
+./secbuild.sh -l
 ```
 
+## 🏗️ Architecture
 
-Warning: This code was originally created for personal use, it generates a substantial amount of traffic, please use with caution.
+SecBuild follows a **modular architecture** for maintainability and extensibility:
+
+```
+Secbuild/
+├── secbuild.sh              # Main orchestrator script
+├── package-dist.ini         # Tools configuration (INI format)
+├── tools_config.yaml        # System packages and profiles
+├── lib/                     # Modular library
+│   ├── i18n.sh              # Internationalization
+│   ├── system.sh            # System detection & setup
+│   ├── logging.sh           # Logging system
+│   ├── cache.sh             # Caching system
+│   ├── validation.sh       # Validation & security
+│   ├── config.sh            # Configuration management
+│   ├── install.sh           # Installation logic
+│   └── ui.sh                # User interface
+└── locales/                 # Translation files
+    ├── en_US.lang
+    └── pt_BR.lang
+```
+
+## 🔧 Advanced Features
+
+### Performance Optimizations
+
+- **Installation Cache**: Caches tool verification results (50-70% faster)
+- **Parallel Installation**: Install multiple tools simultaneously (up to 8 jobs)
+- **Smart Retry**: Adaptive backoff retry for network operations
+- **Shallow Git Clones**: Faster repository cloning
+
+### Security Features
+
+- **Integrity Verification**: Validates Git repository integrity
+- **Hash Verification**: Optional hash verification for downloads
+- **Post-Install Validation**: Validates post-install scripts for security
+- **Sandbox Support**: Isolated execution of post-install commands (when available)
+
+### Health Checks
+
+Comprehensive health checks verify:
+- ✅ Command exists in PATH
+- ✅ Execution permissions
+- ✅ File integrity (not empty, not corrupted)
+- ✅ Symbolic link validity
+- ✅ Runtime execution (timeout test)
+- ✅ Dynamic dependencies (for ELF binaries)
+
+## 📊 Progress Tracking
+
+The improved progress bar shows:
+- **Percentage**: Visual progress (0-100%)
+- **Progress Bar**: Color-coded visual indicator
+- **Current/Total**: Items processed
+- **Tool Name**: Currently processing
+- **Elapsed Time**: Time since start
+- **Estimated Remaining**: Based on average speed
+- **Speed**: Items per minute
+
+Example output:
+```
+[ 80%] [████████████████░░░░] (80/100) nmap [2m30s / 3m10s] [32/min]
+```
+
+## 📝 Logging
+
+SecBuild maintains detailed logs:
+
+- **Main Log**: `~/.secbuild/logs/secbuild_YYYYMMDD_HHMMSS.log`
+- **Error Log**: `~/.secbuild/logs/secbuild_errors_YYYYMMDD_HHMMSS.log`
+- **Audit Trail**: Complete record of all operations
+
+View logs:
+```bash
+# From interactive menu
+sudo ./secbuild.sh
+# Select option 8: View logs
+
+# Or directly
+less ~/.secbuild/logs/secbuild_*.log
+```
+
+## 🔄 Updating Tools
+
+Update installed tools to their latest versions:
+
+```bash
+# Update all installed tools
+sudo ./secbuild.sh -u
+
+# Update specific tool (future feature)
+sudo ./secbuild.sh --update nmap
+```
+
+## 🗑️ Uninstalling Tools
+
+Remove installed tools:
+
+```bash
+# Uninstall specific tool (future feature)
+sudo ./secbuild.sh --uninstall nmap
+```
+
+## ⚙️ Configuration
+
+Configuration is stored in `~/.secbuild/config/secbuild.conf`:
+
+```bash
+# View current configuration
+cat ~/.secbuild/config/secbuild.conf
+
+# Edit configuration (manual)
+nano ~/.secbuild/config/secbuild.conf
+```
+
+### Environment Variables
+
+```bash
+# Set language
+export SECBUILD_LANG=en_US  # or pt_BR
+
+# Set work directory
+export WORK_DIR=/custom/path
+
+# Disable latest release installation
+export USE_LATEST_RELEASE=0
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Problem**: "Bash version too old"
+```bash
+# Solution: Install newer Bash
+# On macOS:
+brew install bash
+/usr/local/bin/bash ./secbuild.sh
+
+# On Linux:
+sudo apt-get install bash
+```
+
+**Problem**: "Permission denied"
+```bash
+# Solution: Run with sudo
+sudo ./secbuild.sh
+```
+
+**Problem**: "Tool installation fails"
+```bash
+# Check logs
+less ~/.secbuild/logs/secbuild_errors_*.log
+
+# Enable verbose mode
+sudo ./secbuild.sh -v -i toolname
+```
+
+**Problem**: "Network timeout"
+```bash
+# SecBuild automatically retries with adaptive backoff
+# If persistent, check your internet connection
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Adding a New Tool
+
+1. Edit `package-dist.ini`:
+```ini
+[NewTool]
+url=https://github.com/user/repo
+script=tool.py
+profile=web,recon
+post_install='go install github.com/user/repo@latest'
+```
+
+2. Test installation:
+```bash
+sudo ./secbuild.sh -i newtool
+```
+
+3. Submit a Pull Request
+
+## 📄 License
+
+This project is licensed under the terms specified in the LICENSE file.
+
+## 🙏 Acknowledgments
+
+- All the amazing tool developers who create and maintain these security tools
+- The security community for feedback and contributions
+- Contributors who help improve SecBuild
+
+## ⚠️ Disclaimer
+
+**This tool is for authorized security testing only. Unauthorized access to computer systems is illegal. The authors and contributors are not responsible for any misuse of this tool.**
+
+## 📞 Support
+
+- **Discord**: [Join our Discord server](https://discord.gg/Z2C2CyVZFU)
+- **Issues**: [GitHub Issues](https://github.com/DonatoReis/Secbuild/issues)
+- **Documentation**: See `ANALISE_COMPLETA.md` for detailed technical documentation
+
+## 🗺️ Roadmap
+
+- [ ] Tool update functionality
+- [ ] Tool uninstallation
+- [ ] Support for multiple package managers (yum, pacman, etc.)
+- [ ] Plugin system for extensibility
+- [ ] Web UI (optional)
+- [ ] Docker container support
+- [ ] CI/CD integration
+
+## 📈 Statistics
+
+- **Total Tools**: 100+
+- **Profiles**: 17
+- **Supported Languages**: 2 (EN, PT-BR)
+- **Installation Methods**: 4 (Git, Go, APT, Post-Install)
+- **Lines of Code**: 5000+
+
+---
+
+<p align="center">
+  <strong>Made with ❤️ for the security community</strong>
+  <br>
+  <em>Recode The Copyright Is Not Make You A Coder</em>
+</p>

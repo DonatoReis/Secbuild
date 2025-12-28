@@ -1,0 +1,195 @@
+# SecBuild - English Translation
+# Format: key=value
+
+# General messages
+msg.info=Information
+msg.success=Success
+msg.warning=Warning
+msg.error=Error
+msg.debug=Debug
+
+# System
+sys.detecting=Detecting operating system...
+sys.compatible=Compatible system detected: %s
+sys.incompatible=This script only supports Linux systems (Kali/Ubuntu)
+sys.detected=System detected: %s
+sys.pkg_manager=Package manager: %s
+sys.system=System: %s | Manager: %s
+
+# Directories
+dir.creating=Creating directory structure...
+dir.created=Directory created: %s
+dir.failed=Failed to create directory: %s
+dir.structure=Directory structure created
+
+# Root
+root.required=This script must be run as root!
+root.usage=Use: sudo %s
+
+# Dependencies
+deps.installing=Installing core system dependencies...
+deps.updating=Updating APT repositories...
+deps.updated=APT repositories updated
+deps.failed_update=Failed to update repositories
+deps.installing_pkg=Installing %s...
+deps.installed=%s installed successfully
+deps.already_installed=%s already installed
+deps.failed=Failed to install %s
+deps.some_failed=Some dependencies failed: %s
+deps.manual_install=You may need to install them manually
+deps.all_installed=All core dependencies installed
+deps.updating_pip=Updating pip...
+deps.pip_failed=Failed to update pip
+
+# Configuration
+config.downloading=Downloading tools configuration file...
+config.copied=Configuration file copied locally
+config.downloaded=Configuration file downloaded
+config.attempt=Attempt %s/%s failed
+config.failed=Failed to download configuration file after %s attempts
+config.not_found=Configuration file not found or not readable
+config.invalid=Invalid configuration file. Check errors above.
+config.processing=Processing tools configuration...
+config.not_found_file=package.ini file not found
+config.registered=Tool registered: %s
+config.processed=Configuration processed: %s tools available
+config.loaded=Loaded tools:
+
+# Validation
+val.validating=Validating configuration file structure...
+val.not_found=File not found: %s
+val.no_read=File not readable: %s
+val.empty=File is empty
+val.no_sections=No valid sections found in file
+val.duplicate=Duplicate sections found:
+val.duplicate_note=Note: The last occurrence of each duplicate section will be used during processing.
+val.errors=Validation errors found:
+val.warnings=Validation warnings:
+val.failed=Validation failed with %s error(s) and %s warning(s)
+val.completed_warnings=Validation completed with %s warning(s)
+val.completed=Validation completed without errors
+
+# Installation
+install.installing=Installing %s...
+install.already_installed=%s already installed
+install.not_found=Tool '%s' not found in registry
+install.success=✓ %s installed successfully
+install.failed=✗ Failed to install %s
+install.all=Starting installation of all tools...
+install.progress=Installing %s...
+install.parallel=Installing %s tools in parallel (max: %s jobs)
+install.started=Started: %s (PID: %s)
+install.completed=✓ %s completed
+install.failed_tool=✗ %s failed
+
+# Git
+git.installing=Installing %s from Git: %s
+git.updating=Updating existing repository...
+git.updated=Repository updated: %s
+git.update_failed=Failed to update %s
+git.cloning=Cloning repository...
+git.cloned=Repository cloned: %s
+git.clone_failed=Failed to clone %s
+
+# Go
+go.installing=Installing %s via Go: %s
+go.installed=%s installed via Go
+go.failed=Failed to install %s via Go (%s)
+
+# Post-install
+post.validating=Validating post-install commands for %s
+post.executing=Executing post-install commands for %s
+post.completed=Post-installation completed for %s
+post.failed=Post-installation failed for %s
+post.dangerous=Dangerous post_install command detected in %s
+post.blocked=Blocked pattern: %s
+post.rejected=Post-install commands rejected for security: %s
+
+# Cache
+cache.using=Using cache for %s
+cache.saved=Content saved to cache: %s
+cache.expired=Cache expired for %s (age: %ss)
+
+# Integrity
+integrity.verified=Integrity verified: %s
+integrity.failed=Integrity verification failed for %s
+integrity.expected=Expected: %s
+integrity.obtained=Obtained: %s
+
+# Profiles
+profile.installing=Installing profile: %s
+profile.not_found=Profile '%s' not found
+profile.tools=Tools in profile '%s': %s
+profile.available=Available profiles:
+profile.none=No profiles configured
+profile.defined=Profiles can be defined in package.ini using:
+profile.example=[Tool]\n  profile=recon,web
+profile.invalid=Invalid profile!
+
+# Menu
+menu.main=Main Menu
+menu.install_all=Install all tools
+menu.install_specific=Install specific tools
+menu.install_profile=Install by profile
+menu.list_tools=List available tools
+menu.check_installed=Check installed tools
+menu.update_tools=Update existing tools
+menu.settings=Settings
+menu.view_logs=View logs
+menu.about=About
+menu.exit=Exit
+menu.choose=Choose an option:
+menu.invalid=Invalid option!
+
+# Summary
+summary.title=Installation Summary
+summary.installed=Successfully installed (%s):
+summary.failed=Failed (%s):
+summary.skipped=Skipped/Already installed (%s):
+summary.success_rate=Success rate: %s%%
+summary.check_log=Check log for more details about failures:
+
+# Dry-run
+dryrun.mode=DRY-RUN mode enabled - no changes will be made
+dryrun.would_exec=Would execute: %s
+dryrun.would_install=Would install via Go: %s
+dryrun.would_clone=Would clone/update repository: %s -> %s
+dryrun.would_update=Would update pip
+
+# About
+about.title=About SecBuild
+about.version=SecBuild v%s
+about.description=Robust and optimized tool for automated installation\nof security and pentesting tools.
+about.features=Features:
+about.feature1=Automated installation of 100+ tools
+about.feature2=Optimized for Kali Linux and Ubuntu
+about.feature3=Smart detection of installed tools
+about.feature4=Advanced dependency management
+about.feature5=Detailed logging system
+about.feature6=Robust error handling
+about.feature7=Friendly interactive interface
+about.compatibility=Compatibility:
+about.compat1=Kali Linux (all versions)
+about.compat2=Ubuntu 20.04+
+about.compat3=Debian 10+
+about.directories=Directories:
+about.work=Work: %s
+about.sources=Sources: %s
+about.binaries=Binaries: %s
+about.logs=Logs: %s
+
+# Usage
+usage.title=SecBuild v%s
+usage.subtitle=Advanced Security Tools Installer for Kali/Ubuntu
+usage.usage=Usage:
+usage.options=Options:
+usage.examples=Examples:
+usage.directories=Directories:
+usage.compatibility=Compatibility:
+usage.more_info=More information:
+sys.continue=Do you want to continue anyway? (y/N): 
+sys.detection_failed=Could not detect Linux distribution
+sys.apt_not_found=APT not found. This script requires APT (Kali/Ubuntu)
+tool=tool
+post.critical_file=Post-install command attempts to modify critical system file in %s
+

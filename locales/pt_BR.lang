@@ -1,0 +1,195 @@
+# SecBuild - Tradução Português (Brasil)
+# Formato: chave=valor
+
+# Mensagens gerais
+msg.info=Informação
+msg.success=Sucesso
+msg.warning=Aviso
+msg.error=Erro
+msg.debug=Debug
+
+# Sistema
+sys.detecting=Detectando sistema operacional...
+sys.compatible=Sistema compatível detectado: %s
+sys.incompatible=Este script suporta apenas sistemas Linux (Kali/Ubuntu)
+sys.detected=Sistema detectado: %s
+sys.pkg_manager=Gerenciador de pacotes: %s
+sys.system=Sistema: %s | Gerenciador: %s
+
+# Diretórios
+dir.creating=Criando estrutura de diretórios...
+dir.created=Diretório criado: %s
+dir.failed=Falha ao criar diretório: %s
+dir.structure=Estrutura de diretórios criada
+
+# Root
+root.required=Este script precisa ser executado como root!
+root.usage=Use: sudo %s
+
+# Dependências
+deps.installing=Instalando dependências principais do sistema...
+deps.updating=Atualizando repositórios APT...
+deps.updated=Repositórios APT atualizados
+deps.failed_update=Falha ao atualizar repositórios
+deps.installing_pkg=Instalando %s...
+deps.installed=%s instalado com sucesso
+deps.already_installed=%s já está instalado
+deps.failed=Falha ao instalar %s
+deps.some_failed=Algumas dependências falharam: %s
+deps.manual_install=Você pode precisar instalá-las manualmente
+deps.all_installed=Todas as dependências principais instaladas
+deps.updating_pip=Atualizando pip...
+deps.pip_failed=Falha ao atualizar pip
+
+# Configuração
+config.downloading=Baixando arquivo de configuração das ferramentas...
+config.copied=Arquivo de configuração copiado localmente
+config.downloaded=Arquivo de configuração baixado
+config.attempt=Tentativa %s/%s falhou
+config.failed=Falha ao baixar arquivo de configuração após %s tentativas
+config.not_found=Arquivo de configuração não encontrado ou sem permissão de leitura
+config.invalid=Arquivo de configuração inválido. Verifique os erros acima.
+config.processing=Processando configuração das ferramentas...
+config.not_found_file=Arquivo package.ini não encontrado
+config.registered=Ferramenta registrada: %s
+config.processed=Configuração processada: %s ferramentas disponíveis
+config.loaded=Ferramentas carregadas:
+
+# Validação
+val.validating=Validando estrutura do arquivo de configuração...
+val.not_found=Arquivo não encontrado: %s
+val.no_read=Arquivo sem permissão de leitura: %s
+val.empty=Arquivo está vazio
+val.no_sections=Nenhuma seção válida encontrada no arquivo
+val.duplicate=Seções duplicadas encontradas:
+val.duplicate_note=Nota: A última ocorrência de cada seção duplicada será usada durante o processamento.
+val.errors=Erros de validação encontrados:
+val.warnings=Avisos de validação:
+val.failed=Validação falhou com %s erro(s) e %s aviso(s)
+val.completed_warnings=Validação concluída com %s aviso(s)
+val.completed=Validação concluída sem erros
+
+# Instalação
+install.installing=Instalando %s...
+install.already_installed=%s já está instalado
+install.not_found=Ferramenta '%s' não encontrada no registro
+install.success=✓ %s instalado com sucesso
+install.failed=✗ Falha ao instalar %s
+install.all=Iniciando instalação de todas as ferramentas...
+install.progress=Instalando %s...
+install.parallel=Instalando %s ferramentas em paralelo (máx: %s jobs)
+install.started=Iniciado: %s (PID: %s)
+install.completed=✓ %s concluído
+install.failed_tool=✗ %s falhou
+
+# Git
+git.installing=Instalando %s do Git: %s
+git.updating=Atualizando repositório existente...
+git.updated=Repositório atualizado: %s
+git.update_failed=Falha ao atualizar %s
+git.cloning=Clonando repositório...
+git.cloned=Repositório clonado: %s
+git.clone_failed=Falha ao clonar %s
+
+# Go
+go.installing=Instalando %s via Go: %s
+go.installed=%s instalado via Go
+go.failed=Falha ao instalar %s via Go (%s)
+
+# Post-install
+post.validating=Validando comandos pós-instalação para %s
+post.executing=Executando comandos pós-instalação para %s
+post.completed=Pós-instalação concluída para %s
+post.failed=Falha no pós-instalação de %s
+post.dangerous=Comando post_install perigoso detectado em %s
+post.blocked=Padrão bloqueado: %s
+post.rejected=Comandos post_install rejeitados por segurança para %s
+
+# Cache
+cache.using=Usando cache para %s
+cache.saved=Conteúdo salvo em cache: %s
+cache.expired=Cache expirado para %s (idade: %ss)
+
+# Integridade
+integrity.verified=Integridade verificada: %s
+integrity.failed=Falha na verificação de integridade para %s
+integrity.expected=Esperado: %s
+integrity.obtained=Obtido: %s
+
+# Perfis
+profile.installing=Instalando perfil: %s
+profile.not_found=Perfil '%s' não encontrado
+profile.tools=Ferramentas do perfil '%s': %s
+profile.available=Perfis disponíveis:
+profile.none=Nenhum perfil configurado
+profile.defined=Perfis podem ser definidos no package.ini usando:
+profile.example=[Ferramenta]\n  profile=recon,web
+profile.invalid=Perfil inválido!
+
+# Menu
+menu.main=Menu Principal
+menu.install_all=Instalar todas as ferramentas
+menu.install_specific=Instalar ferramentas específicas
+menu.install_profile=Instalar por perfil
+menu.list_tools=Listar ferramentas disponíveis
+menu.check_installed=Verificar ferramentas instaladas
+menu.update_tools=Atualizar ferramentas existentes
+menu.settings=Configurações
+menu.view_logs=Ver logs
+menu.about=Sobre
+menu.exit=Sair
+menu.choose=Escolha uma opção:
+menu.invalid=Opção inválida!
+
+# Resumo
+summary.title=Resumo da Instalação
+summary.installed=Instaladas com sucesso (%s):
+summary.failed=Falharam (%s):
+summary.skipped=Puladas/Já instaladas (%s):
+summary.success_rate=Taxa de sucesso: %s%%
+summary.check_log=Verifique o log para mais detalhes sobre as falhas:
+
+# Dry-run
+dryrun.mode=Modo DRY-RUN ativado - nenhuma alteração será feita
+dryrun.would_exec=Executaria: %s
+dryrun.would_install=Instalaria via Go: %s
+dryrun.would_clone=Clonaria/atualizaria repositório: %s -> %s
+dryrun.would_update=Atualizaria pip
+
+# Sobre
+about.title=Sobre o SecBuild
+about.version=SecBuild v%s
+about.description=Ferramenta robusta e otimizada para instalação automatizada\nde ferramentas de segurança e pentesting.
+about.features=Características:
+about.feature1=Instalação automatizada de 100+ ferramentas
+about.feature2=Otimizado para Kali Linux e Ubuntu
+about.feature3=Detecção inteligente de ferramentas instaladas
+about.feature4=Gerenciamento avançado de dependências
+about.feature5=Sistema de logs detalhado
+about.feature6=Tratamento robusto de erros
+about.feature7=Interface interativa amigável
+about.compatibility=Compatibilidade:
+about.compat1=Kali Linux (todas as versões)
+about.compat2=Ubuntu 20.04+
+about.compat3=Debian 10+
+about.directories=Diretórios:
+about.work=Trabalho: %s
+about.sources=Fontes: %s
+about.binaries=Binários: %s
+about.logs=Logs: %s
+
+# Uso
+usage.title=SecBuild v%s
+usage.subtitle=Advanced Security Tools Installer for Kali/Ubuntu
+usage.usage=Uso:
+usage.options=Opções:
+usage.examples=Exemplos:
+usage.directories=Diretórios:
+usage.compatibility=Compatibilidade:
+usage.more_info=Mais informações:
+sys.continue=Deseja continuar mesmo assim? (s/N): 
+sys.detection_failed=Não foi possível detectar a distribuição Linux
+sys.apt_not_found=APT não encontrado. Este script requer APT (Kali/Ubuntu)
+tool=ferramenta
+post.critical_file=Comando post_install tenta modificar arquivo crítico do sistema em %s
+

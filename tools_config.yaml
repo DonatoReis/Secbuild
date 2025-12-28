@@ -77,7 +77,382 @@ system_packages:
     - dnsgen
     - s3scanner
 
-# Ferramentas faltantes
+# Perfis pré-definidos de ferramentas
+# Os perfis são definidos no package.ini usando o atributo "profile"
+# Exemplo: profile=recon,web,dns
+# 
+# Para adicionar uma ferramenta a um perfil, edite o package.ini e adicione:
+# [ToolName]
+# profile=recon,web
+# url=...
+
+profiles:
+  # ============================================================================
+  # RECONNAISSANCE - Coleta de informações e descoberta
+  # ============================================================================
+  recon:
+    description: "Ferramentas de reconhecimento e coleta de informações"
+    tools:
+      - subfinder
+      - findomain
+      - assetfinder
+      - sublist3r
+      - crobat
+      - github-subdomains
+      - chaos-client
+      - haktrails
+      - waybackurls
+      - gau
+      - gauplus
+      - theharvester
+      - infoga
+      - hosthunter
+      - knock
+      - dnsrecon
+      - dnscewl
+      - dnsvalidator
+      - asnmap
+      - httprobe
+      - httpx
+      - gowitness
+      - aquatone
+      - page-fetch
+      - gron
+      - anew
+
+  # ============================================================================
+  # DNS - Ferramentas específicas para DNS
+  # ============================================================================
+  dns:
+    description: "Ferramentas especializadas em análise e enumeração DNS"
+    tools:
+      - dnsx
+      - dnsrecon
+      - dnsvalidator
+      - dnsgen
+      - dnspython
+      - shuffledns
+      - puredns
+      - massdns
+      - dnscewl
+      - crobat
+      - chaos-client
+      - asnmap
+
+  # ============================================================================
+  # SUBDOMAINS - Descoberta e enumeração de subdomínios
+  # ============================================================================
+  subdomains:
+    description: "Ferramentas para descoberta e enumeração de subdomínios"
+    tools:
+      - subfinder
+      - findomain
+      - assetfinder
+      - sublist3r
+      - crobat
+      - github-subdomains
+      - chaos-client
+      - shuffledns
+      - puredns
+      - massdns
+      - dnsx
+      - dnsrecon
+      - dnsvalidator
+      - dnsgen
+      - ctfr
+      - takeover
+      - subjack
+
+  # ============================================================================
+  # WEB - Segurança de aplicações web
+  # ============================================================================
+  web:
+    description: "Ferramentas para testes de segurança em aplicações web"
+    tools:
+      - nuclei
+      - sqlmap
+      - xssstrike
+      - commix
+      - corsy
+      - dalfox
+      - paramspider
+      - gxss
+      - kxss
+      - openredirex
+      - crlfuzz
+      - linkfinder
+      - subjs
+      - getjs
+      - jaeles
+      - dirsearch
+      - gobuster
+      - feroxbuster
+      - ffuf
+      - kiterunner
+      - joomscan
+      - liffy
+      - takeover
+      - cent
+      - burl
+      - jg
+
+  # ============================================================================
+  # FUZZING - Fuzzing e brute force
+  # ============================================================================
+  fuzzing:
+    description: "Ferramentas de fuzzing e brute force"
+    tools:
+      - ffuf
+      - gobuster
+      - feroxbuster
+      - dirsearch
+      - kiterunner
+      - wfuzz
+      - arjun
+      - paramspider
+      - dalfox
+      - nuclei
+
+  # ============================================================================
+  # SSL/TLS - Análise de certificados SSL/TLS
+  # ============================================================================
+  ssl:
+    description: "Ferramentas para análise de certificados SSL/TLS"
+    tools:
+      - sslyze
+      - sslscan
+      - testssl
+      - tlsx
+      - cf-check
+      - httpx
+
+  # ============================================================================
+  # NETWORK - Varredura e análise de rede
+  # ============================================================================
+  network:
+    description: "Ferramentas de varredura e análise de rede"
+    tools:
+      - naabu
+      - rustscan
+      - masscan
+      - unimap
+      - httpx
+      - httprobe
+      - tlsx
+      - asnmap
+      - meg
+      - unfurl
+      - httprobe
+
+  # ============================================================================
+  # OSINT - Open Source Intelligence
+  # ============================================================================
+  osint:
+    description: "Ferramentas de inteligência de código aberto"
+    tools:
+      - ghunt
+      - sherlock
+      - holehe
+      - h8mail
+      - emailfinder
+      - emailharvester
+      - infoga
+      - theharvester
+      - pyosint
+      - pwnedornot
+      - hosthunter
+      - knock
+      - waybackurls
+      - gau
+      - gauplus
+
+  # ============================================================================
+  # WIFI - Segurança de redes WiFi
+  # ============================================================================
+  wifi:
+    description: "Ferramentas para testes de segurança em redes WiFi"
+    tools:
+      - wifiphisher
+      - pyrit
+      - reaver
+      - hcxtools
+      - hcxdumptool
+
+  # ============================================================================
+  # AUTOMATION - Automação e orquestração
+  # ============================================================================
+  automation:
+    description: "Ferramentas de automação e orquestração de testes"
+    tools:
+      - interlace
+      - gorgo
+      - nuclei
+      - notify
+      - interactsh
+      - soxy
+      - cent
+      - jaeles
+
+  # ============================================================================
+  # PARAMETERS - Descoberta e análise de parâmetros
+  # ============================================================================
+  parameters:
+    description: "Ferramentas para descoberta e análise de parâmetros"
+    tools:
+      - paramspider
+      - arjun
+      - gau
+      - gauplus
+      - waybackurls
+      - qsreplace
+      - gxss
+      - kxss
+      - dalfox
+      - openredirex
+
+  # ============================================================================
+  # TAKEOVER - Detecção de subdomain takeover
+  # ============================================================================
+  takeover:
+    description: "Ferramentas para detecção de subdomain takeover"
+    tools:
+      - takeover
+      - subjack
+      - nuclei
+      - subfinder
+      - findomain
+
+  # ============================================================================
+  # CLOUD - Segurança em ambientes cloud
+  # ============================================================================
+  cloud:
+    description: "Ferramentas para segurança em ambientes cloud"
+    tools:
+      - dockerregistrygrabber
+      - s3scanner
+      - cloudbrute
+      - cloudlist
+
+  # ============================================================================
+  # SOCIAL ENGINEERING - Engenharia social
+  # ============================================================================
+  social:
+    description: "Ferramentas de engenharia social (use com responsabilidade)"
+    tools:
+      - socialfish
+      - seeker
+      - saycheese
+      - sayhello
+      - fsociety
+      - wifiphisher
+
+  # ============================================================================
+  # MOBILE - Segurança mobile (quando disponível)
+  # ============================================================================
+  mobile:
+    description: "Ferramentas para testes de segurança mobile"
+    tools:
+      - mobsf
+      - apktool
+      - jadx
+      - frida
+
+  # ============================================================================
+  # UTILITIES - Utilitários e ferramentas auxiliares
+  # ============================================================================
+  utilities:
+    description: "Utilitários e ferramentas auxiliares"
+    tools:
+      - seclists
+      - gf
+      - gf-patterns
+      - urldedupe
+      - filter-resolved
+      - anew
+      - gron
+      - qsreplace
+      - unfurl
+      - meg
+      - httprobe
+      - waybackurls
+      - assetfinder
+      - anonsurf
+      - ngrok
+      - brave
+      - poetry
+      - ufw
+
+  # ============================================================================
+  # PENTEST - Kit completo para pentesting
+  # ============================================================================
+  pentest:
+    description: "Kit completo de ferramentas para pentesting"
+    tools:
+      - subfinder
+      - findomain
+      - assetfinder
+      - nuclei
+      - sqlmap
+      - xssstrike
+      - commix
+      - naabu
+      - rustscan
+      - masscan
+      - httpx
+      - ffuf
+      - gobuster
+      - feroxbuster
+      - dirsearch
+      - dalfox
+      - paramspider
+      - waybackurls
+      - gau
+      - gauplus
+      - theharvester
+      - seclists
+      - gf
+      - gf-patterns
+
+  # ============================================================================
+  # BUG BOUNTY - Ferramentas essenciais para bug bounty
+  # ============================================================================
+  bugbounty:
+    description: "Ferramentas essenciais para programas de bug bounty"
+    tools:
+      - subfinder
+      - findomain
+      - assetfinder
+      - nuclei
+      - dalfox
+      - paramspider
+      - waybackurls
+      - gau
+      - gauplus
+      - httpx
+      - ffuf
+      - gobuster
+      - feroxbuster
+      - dirsearch
+      - gxss
+      - kxss
+      - openredirex
+      - crlfuzz
+      - takeover
+      - subjack
+      - notify
+      - interactsh
+      - jaeles
+      - cent
+
+  # ============================================================================
+  # ALL - Todas as ferramentas disponíveis
+  # ============================================================================
+  all:
+    description: "Instala todas as ferramentas disponíveis"
+    tools:
+      - "*"  # Placeholder - será substituído por todas as ferramentas do package.ini
+
+# Ferramentas faltantes (para referência futura)
 missing_kali_tools:
   all_missing:
     - acccheck
