@@ -398,7 +398,11 @@ health_check_tool() {
     # 6. For ELF binaries: check dynamic dependencies (optional, does not fail)
     if [[ -f "$tool_path" ]] && command -v ldd &>/dev/null && file "$tool_path" 2>/dev/null | grep -q "ELF"; then
         local missing_deps
-        missing_deps=$(ldd "$tool_path" 2>&1 | grep -c "not found" || echo "0")
+        missing_deps=$(ldd "$tool_path" 2>&1 | grep -c "not found" 2>/dev/null || echo "0")
+        # Ensure it's a valid number (remove any newlines or extra characters)
+        missing_deps=$(echo "$missing_deps" | tr -d '\n\r' | head -1)
+        # Default to 0 if not a valid number
+        [[ "$missing_deps" =~ ^[0-9]+$ ]] || missing_deps=0
         
         if [[ $missing_deps -gt 0 ]]; then
             warning "Health check: $missing_deps dynamic dependency(ies) may be missing for $tool"
