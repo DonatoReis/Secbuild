@@ -790,11 +790,13 @@ install_requirements_safe() {
     fi
     
     # Use lock for parallel safety and disable progress bar for speed
-    if pip_with_lock python3 -m pip install -r "$req_file" --no-warn-script-location --quiet --disable-pip-version-check >>"$LOG_FILE" 2>&1; then
+    # Try with --break-system-packages first (for Python 3.13+ on Kali - PEP 668)
+    # Also use --ignore-installed to handle conflicts with system packages (like chardet)
+    if pip_with_lock python3 -m pip install -r "$req_file" --break-system-packages --ignore-installed --no-warn-script-location --quiet --disable-pip-version-check >>"$LOG_FILE" 2>&1; then
         return 0
-    elif pip_with_lock python3 -m pip install -r "$req_file" --user --no-warn-script-location --quiet --disable-pip-version-check >>"$LOG_FILE" 2>&1; then
+    elif pip_with_lock python3 -m pip install -r "$req_file" --user --ignore-installed --no-warn-script-location --quiet --disable-pip-version-check >>"$LOG_FILE" 2>&1; then
         return 0
-    elif pip_with_lock python3 -m pip install -r "$req_file" --break-system-packages --quiet --disable-pip-version-check >>"$LOG_FILE" 2>&1; then
+    elif pip_with_lock python3 -m pip install -r "$req_file" --break-system-packages --no-warn-script-location --quiet --disable-pip-version-check >>"$LOG_FILE" 2>&1; then
         return 0
     fi
     
@@ -830,6 +832,12 @@ install_from_git() {
     local repo_url="$1"
     local script_name="$2"
     local tool_name="$3"
+    
+    # Normalizar URL: converter HTTP para HTTPS (mais seguro e compatível)
+    if [[ "$repo_url" =~ ^http://(github|gitlab)\.com ]]; then
+        repo_url="${repo_url/http:/https:}"
+        debug "Normalized URL to HTTPS: $repo_url"
+    fi
     
     # Validate URL only if VALIDATE_URLS is enabled or in debug mode
     if [[ ${VALIDATE_URLS:-0} -eq 1 ]] || [[ ${VERBOSE_MODE:-0} -eq 1 ]]; then
@@ -903,14 +911,22 @@ install_from_git() {
             # Buscar tags remotas (with lock)
             git_with_path_lock "$install_path" git -C "$install_path" fetch --tags --quiet >>"$LOG_FILE" 2>&1
             
+            # Verificar se tag/versão existe antes de tentar checkout
+            local tag_exists=0
+            if git -C "$install_path" rev-parse --verify --quiet "${target_version}^{commit}" >>"$LOG_FILE" 2>&1 || \
+               git -C "$install_path" rev-parse --verify --quiet "refs/tags/${target_version}" >>"$LOG_FILE" 2>&1 || \
+               git -C "$install_path" rev-parse --verify --quiet "tags/${target_version}" >>"$LOG_FILE" 2>&1; then
+                tag_exists=1
+            fi
+            
             # Verificar se já está na versão correta (use -- to prevent tag injection)
-            if [[ "$current_version" == "$target_version" ]] || \
-               [[ "$(git -C "$install_path" rev-parse --verify --quiet HEAD 2>/dev/null)" == "$(git -C "$install_path" rev-parse --verify --quiet "${target_version}^{commit}" 2>/dev/null)" ]]; then
+            if [[ $tag_exists -eq 1 ]] && ([[ "$current_version" == "$target_version" ]] || \
+               [[ "$(git -C "$install_path" rev-parse --verify --quiet HEAD 2>/dev/null)" == "$(git -C "$install_path" rev-parse --verify --quiet "${target_version}^{commit}" 2>/dev/null)" ]]); then
                 debug "Already at version $target_version"
                 save_to_cache "$cache_key" "$(date +%s)"
                 # Verify repository integrity (non-blocking)
                 verify_git_repository_integrity "$install_path" "$tool_name" "$target_version" || true
-            else
+            elif [[ $tag_exists -eq 1 ]]; then
                 # Fazer checkout da versão específica (tentar múltiplos formatos, with lock)
                 local checkout_success=0
                 for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
@@ -931,6 +947,17 @@ install_from_git() {
                         # Verify repository integrity (non-blocking)
                         verify_git_repository_integrity "$install_path" "$tool_name" || true
                     fi
+                fi
+            else
+                # Tag não existe - limpar cache e usar default branch
+                debug "Tag/version $target_version not found in repository, using default branch"
+                rm -f "${CACHE_DIR:-${WORK_DIR:-/tmp}/cache}/github_release_$(generate_hash "$repo_url").cache" 2>/dev/null || true
+                target_version=""
+                if git_with_path_lock "$install_path" git -C "$install_path" pull -q --ff-only >>"$LOG_FILE" 2>&1; then
+                    debug "Repository updated: $repo_name (default branch)"
+                    save_to_cache "$cache_key" "$(date +%s)"
+                    # Verify repository integrity (non-blocking)
+                    verify_git_repository_integrity "$install_path" "$tool_name" || true
                 fi
             fi
         else
@@ -1099,13 +1126,36 @@ install_from_git() {
         fi
     fi
     
-    # Install via setup.py
+    # Install via setup.py (with Python 3.13 compatibility)
     if [[ -f "$install_path/setup.py" ]]; then
         debug "Running setup.py..."
-        if (cd "$install_path" && python3 setup.py -q install) >>"$LOG_FILE" 2>&1; then
+        # Try standard install first
+        if (cd "$install_path" && python3 setup.py -q install --break-system-packages) >>"$LOG_FILE" 2>&1; then
             debug "Setup.py executed for $tool_name"
+        elif (cd "$install_path" && python3 setup.py -q install --user) >>"$LOG_FILE" 2>&1; then
+            debug "Setup.py executed for $tool_name (user install)"
         else
-            warning "Failed to execute setup.py for $tool_name"
+            # Check if it's a Python 3.13 syntax error (leading zeros in octal)
+            if grep -q "leading zeros in decimal integer literals\|SyntaxError" "$LOG_FILE" 2>/dev/null; then
+                warning "setup.py incompatible with Python 3.13 for $tool_name (syntax error)"
+                debug "Attempting to fix setup.py syntax..."
+                # Try to fix common Python 3.13 issues (0640 -> 0o640)
+                local setup_fixed=0
+                if sed -i.bak 's/\b0\([0-7][0-7]*\)\b/0o\1/g' "$install_path/setup.py" 2>/dev/null; then
+                    if (cd "$install_path" && python3 setup.py -q install --break-system-packages) >>"$LOG_FILE" 2>&1; then
+                        debug "Setup.py fixed and executed for $tool_name"
+                        setup_fixed=1
+                    else
+                        # Restore backup if fix didn't work
+                        mv "$install_path/setup.py.bak" "$install_path/setup.py" 2>/dev/null || true
+                    fi
+                fi
+                if [[ $setup_fixed -eq 0 ]]; then
+                    warning "Failed to execute setup.py for $tool_name (Python 3.13 incompatibility)"
+                fi
+            else
+                warning "Failed to execute setup.py for $tool_name"
+            fi
         fi
     fi
     
@@ -1428,6 +1478,7 @@ install_with_cargo() {
 execute_post_install() {
     local commands="$1"
     local tool_name="$2"
+    local repo_path="${3:-}"  # Caminho do repositório (opcional)
     
     debug "Executing post-install commands for $tool_name"
     
@@ -1436,11 +1487,27 @@ execute_post_install() {
         return 1
     fi
     
-    commands="${commands//\$installdir/$SRC_DIR}"
+    # Se repo_path não foi fornecido, tentar encontrar baseado no tool_name
+    if [[ -z "$repo_path" ]]; then
+        # Tentar encontrar o repositório clonado
+        local repo_name="${tool_name,,}"  # lowercase
+        for possible_path in "$SRC_DIR"/*/"${repo_name}" "$SRC_DIR"/*/*"${repo_name}"*; do
+            if [[ -d "$possible_path/.git" ]] || [[ -d "$possible_path" ]]; then
+                repo_path="$possible_path"
+                break
+            fi
+        done
+    fi
+    
+    # Substituir variáveis: $installdir deve apontar para o repositório, não $SRC_DIR
+    local install_dir_to_use="${repo_path:-$SRC_DIR}"
+    commands="${commands//\$installdir/$install_dir_to_use}"
     commands="${commands//\$bindir/$BIN_DIR}"
     commands="${commands//\$srcdir/$SRC_DIR}"
+    commands="${commands//\$repodir/$repo_path}"  # Nova variável para caminho do repo
     
     debug "post_install($tool_name): $commands"
+    [[ -n "$repo_path" ]] && debug "Using repository path: $repo_path"
     
     if [[ $DRY_RUN -eq 1 ]]; then
         info "Would execute: $commands"
@@ -1454,14 +1521,29 @@ execute_post_install() {
     echo "$commands" > "$temp_script"
     chmod +x "$temp_script"
     
-    if env -i PATH="$safe_path" HOME="$HOME" USER="$USER" bash -euo pipefail "$temp_script" >>"$LOG_FILE" 2>&1; then
-        rm -f "$temp_script"
-        debug "Post-installation completed for $tool_name"
-        return 0
+    # Executar no diretório do repositório se disponível
+    local exec_dir="${repo_path:-$SRC_DIR}"
+    if [[ -d "$exec_dir" ]]; then
+        if (cd "$exec_dir" && env -i PATH="$safe_path" HOME="$HOME" USER="$USER" bash -euo pipefail "$temp_script" >>"$LOG_FILE" 2>&1); then
+            rm -f "$temp_script"
+            debug "Post-installation completed for $tool_name"
+            return 0
+        else
+            rm -f "$temp_script"
+            error "Post-installation failed for $tool_name"
+            return 1
+        fi
     else
-        rm -f "$temp_script"
-        error "Post-installation failed for $tool_name"
-        return 1
+        # Fallback: executar sem mudar diretório
+        if env -i PATH="$safe_path" HOME="$HOME" USER="$USER" bash -euo pipefail "$temp_script" >>"$LOG_FILE" 2>&1; then
+            rm -f "$temp_script"
+            debug "Post-installation completed for $tool_name"
+            return 0
+        else
+            rm -f "$temp_script"
+            error "Post-installation failed for $tool_name"
+            return 1
+        fi
     fi
 }
 
@@ -1636,10 +1718,19 @@ install_single_tool() {
         debug "Detected Cargo build for $tool_name"
     fi
     
+    # Determinar caminho do repositório para post_install
+    local repo_install_path=""
     if [[ -n "$url" ]] && [[ $is_cargo_build -eq 0 ]]; then
         if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
             status_inline "Cloning $tool_name..."
         fi
+        # Extrair caminho do repositório antes de instalar
+        local repo_name="${url##*/}"
+        repo_name="${repo_name%.git}"
+        local vendor="${url%/*}"
+        vendor="${vendor##*/}"
+        repo_install_path="$SRC_DIR/$vendor/$repo_name"
+        
         install_from_git "$url" "$script" "$tool_name" && install_success=1
     fi
     
@@ -1690,7 +1781,8 @@ install_single_tool() {
             if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
                 status_inline "Configuring $tool_name..."
             fi
-            execute_post_install "$post_install" "$tool_name" && install_success=1
+            # Passar caminho do repositório para execute_post_install
+            execute_post_install "$post_install" "$tool_name" "$repo_install_path" && install_success=1
         fi
     fi
     
@@ -1772,6 +1864,23 @@ time_tool() {
     return $rc
 }
 
+# Validate if package exists in APT repositories
+pkg_exists_apt() {
+    local package="$1"
+    
+    # Check if package exists in APT cache (fast check)
+    if apt-cache show "$package" &>/dev/null 2>&1; then
+        return 0
+    fi
+    
+    # If not in cache, try to search (slower but more thorough)
+    if apt-cache search --names-only "^${package}$" 2>/dev/null | grep -q "^${package}"; then
+        return 0
+    fi
+    
+    return 1
+}
+
 # Collect all APT dependencies from all tools (two-phase install optimization)
 collect_all_apt_dependencies() {
     declare -A all_deps=()
@@ -1788,7 +1897,14 @@ collect_all_apt_dependencies() {
                 # Trim whitespace
                 dep=$(echo "$dep" | xargs)
                 if [[ -n "$dep" ]]; then
-                    all_deps["$dep"]=1
+                    # Validate that this is actually an APT package (not a tool name)
+                    # Skip if it's clearly a tool name (waybackurls, ngrok, etc.)
+                    # These should be installed via Go/Git, not APT
+                    if pkg_exists_apt "$dep"; then
+                        all_deps["$dep"]=1
+                    else
+                        debug "Skipping '$dep' - not found in APT repositories (likely a tool, not a package)"
+                    fi
                 fi
             done
         fi
@@ -2218,6 +2334,7 @@ install_core_dependencies() {
     local core_deps=(
         "curl" "wget" "git" "build-essential" "python3" "python3-pip"
         "golang-go" "cargo" "cmake" "jq" "dialog" "bc" "realpath"
+        "libpcap-dev"  # Required for naabu and other network tools
     )
     
     # Adicionar pacotes do tools_config.yaml se disponível
