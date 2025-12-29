@@ -265,22 +265,22 @@ format_time() {
     fi
 }
 
-# Improved progress bar (NEW IMPROVEMENT)
+# Improved progress bar with inline status messages
 show_progress() {
     local current=$1
     local total=$2
     local msg="${3:-Processing...}"
-    local width=50
+    local status_msg="${CURRENT_STATUS_MESSAGE:-}"  # Mensagem de status atual (modo inline)
+    local width=42  # Barra mais compacta
     
     [[ $total -eq 0 ]] && total=1
     
     local percentage=$((current * 100 / total))
     local filled=$((width * current / total))
     
-    # Calculate elapsed time and estimate (if START_TIME is defined)
+    # Calculate elapsed time and estimate
     local elapsed_str=""
     local remaining_str=""
-    local speed_str=""
     
     if [[ -n "${START_TIME:-}" ]]; then
         local elapsed=$(($(date +%s) - START_TIME))
@@ -291,18 +291,14 @@ show_progress() {
             local avg_time_per_item=$((elapsed / current))
             local remaining=$((avg_time_per_item * (total - current)))
             remaining_str=$(format_time "$remaining")
-            
-            # Calculate speed (items per minute)
-            local speed=$((current * 60 / elapsed))
-            [[ $speed -gt 0 ]] && speed_str="${speed}/min"
         fi
     fi
     
     # Colors based on progress
     local color=""
-    [[ $percentage -lt 33 ]] && color="\033[0;31m"  # Vermelho
-    [[ $percentage -ge 33 && $percentage -lt 66 ]] && color="\033[0;33m"  # Amarelo
-    [[ $percentage -ge 66 ]] && color="\033[0;32m"  # Verde
+    [[ $percentage -lt 33 ]] && color="${RED}"
+    [[ $percentage -ge 33 && $percentage -lt 66 ]] && color="${YELLOW}"
+    [[ $percentage -ge 66 ]] && color="${GREEN}"
     
     # Build visual bar
     local bar=""
@@ -313,26 +309,48 @@ show_progress() {
         bar+="░"
     done
     
-    # Output formatado melhorado
-    printf "\r\033[K"
+    # Limpar linha atual e construir output (tudo na mesma linha)
+    printf "\r\033[K"  # \r volta ao início, \033[K limpa até o fim da linha
+    
+    # Parte 1: Progresso (compacto)
     printf "${color}[%3d%%]${RESET} " "$percentage"
     printf "[${color}%s${RESET}] " "$bar"
     printf "(%d/%d) " "$current" "$total"
-    printf "${CYAN}%-20s${RESET} " "${msg:0:20}"
     
-    # Add time information if available
-    if [[ -n "$elapsed_str" ]]; then
-        printf "[${YELLOW}%s${RESET}" "$elapsed_str"
-        [[ -n "$remaining_str" ]] && printf " / ${YELLOW}%s${RESET}" "$remaining_str"
-        printf "]"
-        [[ -n "$speed_str" ]] && printf " [${GREEN}%s${RESET}]" "$speed_str"
+    # Parte 2: Nome da ferramenta (fixo, 16 chars)
+    printf "${CYAN}%-16s${RESET} " "${msg:0:16}"
+    
+    # Parte 3: Status/Mensagem dinâmica (até 35 chars)
+    if [[ -n "$status_msg" ]]; then
+        local display_status="${status_msg:0:35}"
+        printf "│ ${display_status}"
     fi
+    
+    # Parte 4: Tempo (compacto, apenas se não houver status ou em verbose)
+    if [[ -n "$elapsed_str" ]]; then
+        if [[ -z "$status_msg" ]] || [[ ${VERBOSE_MODE:-0} -eq 1 ]]; then
+            printf " │ ${YELLOW}%s${RESET}" "$elapsed_str"
+            [[ -n "$remaining_str" ]] && printf "/%s" "$remaining_str"
+        fi
+    fi
+    
+    # Não fazer \n - manter na mesma linha para atualização dinâmica
+}
+
+# Função para limpar a linha de progresso
+clear_progress_line() {
+    printf "\r\033[K"  # Limpar linha atual
 }
 
 print_installation_summary() {
+    # Limpar linha de progresso antes do resumo
+    clear_progress_line
     echo
-    echo -e "${CYAN}Installation Summary${RESET}"
+    
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo -e "${CYAN}Resumo da Instalação${RESET}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
     
     # Use helper function to count arrays safely
     local installed_count failed_count skipped_count
@@ -340,34 +358,75 @@ print_installation_summary() {
     failed_count=$(safe_array_count "FAILED_TOOLS")
     skipped_count=$(safe_array_count "SKIPPED_TOOLS")
     
+    # Mostrar estatísticas gerais
+    local total_processed=$((installed_count + failed_count + skipped_count))
+    echo -e "${CYAN}Estatísticas:${RESET}"
+    echo -e "  Total processado: ${total_processed}"
+    echo -e "  ${GREEN}✓ Instaladas:${RESET} ${installed_count}"
+    echo -e "  ${YELLOW}⊘ Já instaladas:${RESET} ${skipped_count}"
+    echo -e "  ${RED}✗ Falharam:${RESET} ${failed_count}"
+    echo
+    
+    # Detalhes das ferramentas instaladas
     if array_has_elements "INSTALLED_TOOLS"; then
-        echo -e "${GREEN}Successfully installed ($installed_count):${RESET}"
+        echo -e "${GREEN}✓ Ferramentas Instaladas ($installed_count):${RESET}"
         set +u
-        for tool in "${INSTALLED_TOOLS[@]}"; do
-            echo "  ✓ $tool"
-        done
+        if [[ $installed_count -le 30 ]] || [[ ${VERBOSE_MODE:-0} -eq 1 ]]; then
+            # Mostrar lista completa se poucas ou em modo verbose
+            for tool in "${INSTALLED_TOOLS[@]}"; do
+                echo -e "  ${GREEN}•${RESET} $tool"
+            done
+        else
+            # Mostrar apenas primeiras e últimas
+            local count=0
+            for tool in "${INSTALLED_TOOLS[@]}"; do
+                if [[ $count -lt 10 ]] || [[ $count -ge $((installed_count - 10)) ]]; then
+                    echo -e "  ${GREEN}•${RESET} $tool"
+                elif [[ $count -eq 10 ]]; then
+                    echo -e "  ${CYAN}...${RESET} ($((installed_count - 20)) mais)"
+                fi
+                ((count++))
+            done
+        fi
         set -u
+        echo
     fi
     
+    # Detalhes das ferramentas que falharam (sempre mostrar)
     if array_has_elements "FAILED_TOOLS"; then
-        echo
-        echo -e "${RED}Failed ($failed_count):${RESET}"
+        echo -e "${RED}✗ Ferramentas que Falharam ($failed_count):${RESET}"
         set +u
         for tool in "${FAILED_TOOLS[@]}"; do
-            echo "  ✗ $tool"
+            echo -e "  ${RED}•${RESET} $tool"
         done
         set -u
+        echo
+        echo -e "${YELLOW}[!]${RESET} Verifique os logs para detalhes: ${LOG_FILE}"
+        echo
     fi
     
+    # Detalhes das ferramentas já instaladas (apenas em verbose ou se poucas)
     if array_has_elements "SKIPPED_TOOLS"; then
-        echo
-        echo -e "${YELLOW}Skipped/Already installed ($skipped_count):${RESET}"
-        set +u
-        for tool in "${SKIPPED_TOOLS[@]}"; do
-            echo "  ⊘ $tool"
-        done
-        set -u
+        if [[ ${VERBOSE_MODE:-0} -eq 1 ]] || [[ $skipped_count -le 20 ]]; then
+            echo -e "${YELLOW}⊘ Já Instaladas ($skipped_count):${RESET}"
+            set +u
+            for tool in "${SKIPPED_TOOLS[@]}"; do
+                echo -e "  ${YELLOW}•${RESET} $tool"
+            done
+            set -u
+            echo
+        fi
     fi
+    
+    # Mensagem final
+    if [[ $failed_count -eq 0 ]] && [[ $installed_count -gt 0 ]]; then
+        echo -e "${GREEN}[✓]${RESET} Instalação concluída com sucesso!"
+    elif [[ $failed_count -gt 0 ]]; then
+        echo -e "${YELLOW}[!]${RESET} Instalação concluída com alguns erros. Verifique os logs acima."
+    else
+        echo -e "${CYAN}[i]${RESET} Nenhuma nova instalação necessária."
+    fi
+    echo
     
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     
@@ -889,6 +948,7 @@ ${GREEN}Options:${RESET}
   -v, --verbose       Verbose mode (debug)
   -f, --force         Force dependency update
   -s, --silent        Silent mode (non-interactive)
+  -q, --quiet         Quiet mode (suppress "already installed" messages)
   -l, --list          List available tools
   -i, --install TOOL  Install specific tool
   -u, --update        Update all installed tools
@@ -942,6 +1002,7 @@ main() {
             --debug) set -x; VERBOSE_MODE=1; shift ;;
             -f|--force) FORCE_UPDATE=1; shift ;;
             -s|--silent) SILENT_MODE=1; INTERACTIVE_MODE=0; shift ;;
+            -q|--quiet) QUIET_SKIP_MODE=1; shift ;;
             -l|--list)
                 [[ ! -f "$CONFIG_DIR/package.ini" ]] && download_package_ini
                 parse_package_ini

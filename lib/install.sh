@@ -968,28 +968,26 @@ install_from_git() {
         if [[ -n "$target_version" ]]; then
             # Try cloning directly to the tag/branch (fastest method)
             local clone_success=0
-            for branch_option in "--branch $target_version" "--branch tags/$target_version" ""; do
-                if [[ -n "$branch_option" ]]; then
-                    if git_with_path_lock "$install_path" git clone --filter=blob:none --depth 1 $branch_option -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
-                        debug "Repository cloned: $repo_name (version $target_version)"
-                        clone_success=1
-                        break
-                    fi
-                else
-                    # Fallback: clone shallow then checkout
-                    if git_with_path_lock "$install_path" git clone --filter=blob:none --depth 1 -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
-                        git_with_path_lock "$install_path" git -C "$install_path" fetch --tags --quiet >>"$LOG_FILE" 2>&1 || true
-                        for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
-                            if git_with_path_lock "$install_path" git -C "$install_path" checkout -q -- "$checkout_method" >>"$LOG_FILE" 2>&1; then
-                                debug "Repository cloned: $repo_name (version $target_version)"
-                                clone_success=1
-                                break
-                            fi
-                        done
-                        [[ $clone_success -eq 1 ]] && break
-                    fi
+            # Tentar com --branch primeiro
+            if git_with_path_lock "$install_path" git clone --filter=blob:none --depth 1 --branch "$target_version" -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
+                debug "Repository cloned: $repo_name (version $target_version)"
+                clone_success=1
+            elif git_with_path_lock "$install_path" git clone --filter=blob:none --depth 1 --branch "tags/$target_version" -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
+                debug "Repository cloned: $repo_name (version $target_version)"
+                clone_success=1
+            else
+                # Fallback: clone shallow then checkout
+                if git_with_path_lock "$install_path" git clone --filter=blob:none --depth 1 -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
+                    git_with_path_lock "$install_path" git -C "$install_path" fetch --tags --quiet >>"$LOG_FILE" 2>&1 || true
+                    for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
+                        if git_with_path_lock "$install_path" git -C "$install_path" checkout -q -- "$checkout_method" >>"$LOG_FILE" 2>&1; then
+                            debug "Repository cloned: $repo_name (version $target_version)"
+                            clone_success=1
+                            break
+                        fi
+                    done
                 fi
-            done
+            fi
             
             if [[ $clone_success -eq 0 ]]; then
                 # Last resort: full clone
@@ -1021,15 +1019,70 @@ install_from_git() {
                 # Verify repository integrity (non-blocking)
                 verify_git_repository_integrity "$install_path" "$tool_name" || true
             else
+                # Verificar tipo de erro
+                local git_error=""
+                if grep -q "Authentication failed\|Username for\|Permission denied" "$LOG_FILE" 2>/dev/null; then
+                    git_error="auth"
+                elif grep -q "Repository not found\|404" "$LOG_FILE" 2>/dev/null; then
+                    git_error="notfound"
+                elif grep -q "fatal:" "$LOG_FILE" 2>/dev/null; then
+                    git_error="fatal"
+                fi
+                
                 # Fallback to full clone
-                warning "Shallow clone failed, trying full clone..."
-                if git_with_path_lock "$install_path" git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
-                    debug "Repository cloned: $repo_name"
-                    save_to_cache "$cache_key" "$(date +%s)"
-                    # Verify repository integrity (non-blocking)
-                    verify_git_repository_integrity "$install_path" "$tool_name" || true
+                if [[ "$git_error" != "auth" ]] && [[ "$git_error" != "notfound" ]]; then
+                    if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                        status_inline "Retrying $tool_name (full clone)..."
+                    else
+                        warning "Shallow clone failed, trying full clone..."
+                    fi
+                    if git_with_path_lock "$install_path" git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
+                        debug "Repository cloned: $repo_name"
+                        save_to_cache "$cache_key" "$(date +%s)"
+                        # Verify repository integrity (non-blocking)
+                        verify_git_repository_integrity "$install_path" "$tool_name" || true
+                    else
+                        if [[ "$git_error" == "auth" ]]; then
+                            if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                                error_inline "Git auth failed for $repo_name"
+                            else
+                                error "Falha de autenticação ao clonar $repo_name"
+                                error "Configure credenciais Git ou use SSH:"
+                                error "  git remote set-url origin git@github.com:USER/REPO.git"
+                            fi
+                        elif [[ "$git_error" == "notfound" ]]; then
+                            if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                                error_inline "Repository not found: $repo_name"
+                            else
+                                error "Repositório não encontrado: $repo_url"
+                            fi
+                        else
+                            if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                                error_inline "Failed to clone $repo_name"
+                            else
+                                error "Failed to clone $repo_name"
+                                error "Verifique os logs em: $LOG_FILE"
+                            fi
+                        fi
+                        return 1
+                    fi
                 else
-                    error "Failed to clone $repo_name"
+                    # Erro de autenticação ou repositório não encontrado
+                    if [[ "$git_error" == "auth" ]]; then
+                        if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                            error_inline "Git auth failed for $repo_name"
+                        else
+                            error "Falha de autenticação ao clonar $repo_name"
+                            error "Configure credenciais Git ou use SSH:"
+                            error "  git remote set-url origin git@github.com:USER/REPO.git"
+                        fi
+                    else
+                        if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                            error_inline "Repository not found: $repo_name"
+                        else
+                            error "Repositório não encontrado: $repo_url"
+                        fi
+                    fi
                     return 1
                 fi
             fi
@@ -1494,13 +1547,29 @@ install_single_tool() {
     local use_thread_safe="${2:-0}"  # Flag para usar arrays thread-safe em paralelo
     
     if [[ -z "${TOOLS_REGISTRY[$tool_name]:-}" ]]; then
-        warning "Tool '$tool_name' not found in registry"
+        if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+            warning_inline "Tool '$tool_name' not found"
+        else
+            warning "Tool '$tool_name' not found in registry"
+        fi
         [[ $use_thread_safe -eq 1 ]] && add_to_failed "$tool_name"
         return 1
     fi
     
     if is_installed_tool "$tool_name"; then
-        info "$tool_name already installed"
+        # Suprimir mensagens "already installed" em modo normal
+        if [[ ${VERBOSE_MODE:-0} -eq 1 ]]; then
+            if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                status_inline "✓ $tool_name (já instalado)"
+            else
+                info "$tool_name already installed"
+            fi
+        else
+            # Em modo normal, apenas contar (não mostrar)
+            if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                status_inline "✓ $tool_name (já instalado)"
+            fi
+        fi
         if [[ $use_thread_safe -eq 1 ]]; then
             add_to_skipped "$tool_name"
         else
@@ -1509,11 +1578,20 @@ install_single_tool() {
         return 0
     fi
     
-    info "Installing $tool_name..."
+    # Mostrar status na barra (modo inline) ou mensagem normal
+    if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+        status_inline "Installing $tool_name..."
+    else
+        info "Installing $tool_name..."
+    fi
     
     # Check disk space before installing
     if ! check_disk_space 500; then
-        error "Insufficient space to install $tool_name"
+        if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+            error_inline "Insufficient space for $tool_name"
+        else
+            error "Insufficient space to install $tool_name"
+        fi
         [[ $use_thread_safe -eq 1 ]] && add_to_failed "$tool_name"
         return 1
     fi
@@ -1559,6 +1637,9 @@ install_single_tool() {
     fi
     
     if [[ -n "$url" ]] && [[ $is_cargo_build -eq 0 ]]; then
+        if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+            status_inline "Cloning $tool_name..."
+        fi
         install_from_git "$url" "$script" "$tool_name" && install_success=1
     fi
     
@@ -1579,19 +1660,36 @@ install_single_tool() {
             go_pkg=$(echo "$go_pkg" | awk '{print $1}')
             debug "Extracted Go package: $go_pkg"
             if [[ -z "$go_pkg" ]] || [[ "$go_pkg" =~ ^- ]]; then
-                error "Failed to extract Go package from: $post_install"
+                if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                    error_inline "Failed to extract Go package"
+                else
+                    error "Failed to extract Go package from: $post_install"
+                fi
                 return 1
+            fi
+            if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                status_inline "Building $tool_name (Go)..."
             fi
             install_with_go "$go_pkg" "$tool_name" && install_success=1
         elif [[ "$post_install" =~ cargo[[:space:]]+build ]]; then
             # Detect cargo build - install from Git URL if available
             debug "Processing Cargo build for $tool_name"
             if [[ -n "$url" ]]; then
+                if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                    status_inline "Building $tool_name (Rust)..."
+                fi
                 install_with_cargo "$url" "$tool_name" && install_success=1
             else
-                error "Cargo build requested but no Git URL provided for $tool_name"
+                if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                    error_inline "Cargo build: no Git URL"
+                else
+                    error "Cargo build requested but no Git URL provided for $tool_name"
+                fi
             fi
         else
+            if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                status_inline "Configuring $tool_name..."
+            fi
             execute_post_install "$post_install" "$tool_name" && install_success=1
         fi
     fi
@@ -1606,6 +1704,9 @@ install_single_tool() {
     
     # Post-installation health check
     if [[ $install_success -eq 1 ]]; then
+        if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+            status_inline "Verifying $tool_name..."
+        fi
         if health_check_tool "$tool_name"; then
             TOOLS_STATUS["$tool_name"]="installed"
             if [[ $use_thread_safe -eq 1 ]]; then
@@ -1613,10 +1714,13 @@ install_single_tool() {
             else
                 INSTALLED_TOOLS+=("$tool_name")
             fi
-            success "✓ $tool_name installed successfully"
+            if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                success_inline "$tool_name installed"
+            else
+                success "✓ $tool_name installed successfully"
+            fi
             return 0
         else
-            warning "Tool $tool_name installed but did not pass health check"
             # Consider as installed anyway (may be PATH issue)
             TOOLS_STATUS["$tool_name"]="installed"
             if [[ $use_thread_safe -eq 1 ]]; then
@@ -1624,7 +1728,12 @@ install_single_tool() {
             else
                 INSTALLED_TOOLS+=("$tool_name")
             fi
-            success "✓ $tool_name installed successfully"
+            if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+                warning_inline "$tool_name installed (health check failed)"
+            else
+                warning "Tool $tool_name installed but did not pass health check"
+                success "✓ $tool_name installed successfully"
+            fi
             return 0
         fi
     else
@@ -1634,7 +1743,11 @@ install_single_tool() {
         else
             FAILED_TOOLS+=("$tool_name")
         fi
-        error "Failed to install $tool_name"
+        if [[ ${INLINE_MODE:-0} -eq 1 ]]; then
+            error_inline "Failed to install $tool_name"
+        else
+            error "Failed to install $tool_name"
+        fi
         return 1
     fi
 }
@@ -1744,11 +1857,15 @@ install_all_apt_dependencies() {
 install_all_tools() {
     info "Starting installation of all tools..."
     
+    # Ativar modo inline para manter barra única
+    export INLINE_MODE=1
+    
     # Register start time
     export START_TIME=$(date +%s)
     
     # TWO-PHASE INSTALL: Phase A - Install all APT dependencies in batch
     if [[ $DRY_RUN -eq 0 ]]; then
+        status_inline "Installing dependencies..."
         install_all_apt_dependencies || warning "Some dependencies may need manual installation"
     fi
     
@@ -1762,13 +1879,25 @@ install_all_tools() {
     else
         local total=${#tools_array[@]}
         local current=0
+        
+        # Mostrar barra inicial
+        show_progress 0 "$total" "Starting..."
+        
         for tool in "${tools_array[@]}"; do
             ((current++))
-            show_progress "$current" "$total" "Processing $tool..."
+            show_progress "$current" "$total" "$tool"
             time_tool "$tool" install_single_tool "$tool" || true
+            # Atualizar barra após cada instalação
+            show_progress "$current" "$total" "$tool"
         done
-        echo
+        
+        # Limpar linha de progresso no final
+        clear_progress_line
+        echo  # Nova linha após limpar
     fi
+    
+    # Desativar modo inline
+    export INLINE_MODE=0
     
     # Coletar métricas
     collect_metrics
@@ -1928,6 +2057,10 @@ install_profile() {
     
     info "Installing profile: $profile"
     
+    # Ativar modo inline para manter barra única
+    export INLINE_MODE=1
+    export START_TIME=$(date +%s)
+    
     # Verificar se o perfil existe (safe array access)
     local tools=""
     if [[ ${PROFILE_TOOLS[$profile]+_} ]]; then
@@ -1935,6 +2068,7 @@ install_profile() {
     fi
     
     if [[ -z "$tools" ]]; then
+        export INLINE_MODE=0
         error "Profile '$profile' not found"
         echo
         info "Available profiles:"
@@ -1949,6 +2083,7 @@ install_profile() {
     read -ra tool_array <<< "$tools"
     
     if [[ ${#tool_array[@]} -eq 0 ]]; then
+        export INLINE_MODE=0
         error "Profile '$profile' not found"
         return 1
     fi
@@ -1972,16 +2107,31 @@ install_profile() {
     if [[ ${PARALLEL_INSTALL:-0} -eq 1 ]]; then
         install_tools_parallel "${tool_array[@]}"
     else
+        local total=${#tool_array[@]}
+        local current=0
+        
+        # Mostrar barra inicial
+        show_progress 0 "$total" "Starting..."
+        
         for tool in "${tool_array[@]}"; do
+            ((current++))
+            show_progress "$current" "$total" "$tool"
             if install_single_tool "$tool"; then
                 ((installed++))
             else
                 ((failed++))
             fi
+            show_progress "$current" "$total" "$tool"
         done
+        
+        # Limpar linha de progresso
+        clear_progress_line
+        echo
     fi
     
-    echo
+    # Desativar modo inline
+    export INLINE_MODE=0
+    
     print_installation_summary
     
     if [[ $installed -gt 0 ]]; then
