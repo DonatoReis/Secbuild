@@ -79,6 +79,11 @@ APT_UPDATE_DONE=0
 USE_LATEST_RELEASE=1  # Always use latest stable version from GitHub
 DISTRO=""
 PKG_MANAGER=""
+PARANOID_MODE=0  # Full health checks (slower but thorough)
+VALIDATE_URLS=0  # Validate URLs before cloning (disabled by default for performance)
+
+# Export PARENT_PID for thread-safe parallel operations
+export PARENT_PID="$$"
 
 # Arrays for tools
 declare -A TOOLS_REGISTRY

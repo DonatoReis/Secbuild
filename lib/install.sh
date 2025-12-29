@@ -5,6 +5,19 @@
 ################################################################################
 
 # ==============================================================================
+# BASH VERSION CHECK (requires Bash 4+ for associative arrays)
+# ==============================================================================
+if [[ "${BASH_VERSION%%.*}" -lt 4 ]]; then
+    echo "Error: This script requires Bash 4.0 or higher." >&2
+    echo "Current version: $BASH_VERSION" >&2
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "On macOS, install Bash 4+ via Homebrew: brew install bash" >&2
+        echo "Then run this script with: /usr/local/bin/bash $0" >&2
+    fi
+    exit 1
+fi
+
+# ==============================================================================
 # FUNÇÕES AUXILIARES DE SEGURANÇA E PERFORMANCE
 # ==============================================================================
 
@@ -18,25 +31,17 @@ declare -gA INSTALLED_CACHE
 cached_command_exists() {
     local cmd="$1"
     
-    # Check cache first
-    set +u
-    if [[ -n "${COMMAND_CACHE[$cmd]:-}" ]]; then
-        local cached_result="${COMMAND_CACHE[$cmd]}"
-        set -u
-        return "$cached_result"
+    # Check cache first (safe array access without modifying set -u)
+    if [[ ${COMMAND_CACHE[$cmd]+_} ]]; then
+        return "${COMMAND_CACHE[$cmd]}"
     fi
-    set -u
     
     # Check command
     if command -v "$cmd" &>/dev/null 2>&1; then
-        set +u
         COMMAND_CACHE[$cmd]=0
-        set -u
         return 0
     else
-        set +u
         COMMAND_CACHE[$cmd]=1
-        set -u
         return 1
     fi
 }
@@ -82,6 +87,19 @@ github_url_to_api() {
     fi
 }
 
+# Generate SHA256 hash (portable: works on Linux and macOS)
+sha256_hex() {
+    local str="$1"
+    if command -v sha256sum &>/dev/null; then
+        echo -n "$str" | sha256sum | awk '{print $1}'
+    elif command -v shasum &>/dev/null; then
+        echo -n "$str" | shasum -a 256 | awk '{print $1}'
+    else
+        # Fallback: simple hash-like string
+        echo "$str" | tr -d '/:.' | head -c 32
+    fi
+}
+
 # Gerar hash de string (compatível com macOS e Linux)
 generate_hash() {
     local str="$1"
@@ -91,7 +109,7 @@ generate_hash() {
         echo -n "$str" | md5 | cut -d' ' -f1
     else
         # Fallback: usar hash simples baseado em caracteres
-        echo -n "$str" | sha256sum 2>/dev/null | cut -d' ' -f1 || echo "$str" | tr -d '/:.' | head -c 32
+        sha256_hex "$str" | head -c 16
     fi
 }
 
@@ -100,7 +118,8 @@ get_latest_github_release() {
     local repo_url="$1"
     local repo_hash
     repo_hash=$(generate_hash "$repo_url")
-    local cache_file="${CACHE_DIR:-$WORK_DIR/cache}/github_release_${repo_hash}.cache"
+    local cache_root="${CACHE_DIR:-${WORK_DIR:-/tmp}/cache}"
+    local cache_file="${cache_root}/github_release_${repo_hash}.cache"
     local cache_ttl=3600  # 1 hora
     
     # Verificar cache
@@ -129,19 +148,48 @@ get_latest_github_release() {
     [[ -z "$api_url" ]] && return 1
     
     # Search for latest release (not pre-release)
+    # Support GITHUB_TOKEN for rate limit avoidance
+    # Remove -f to capture http_code even on 403/404
+    local curl_opts=(-sS --max-time 10)
+    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+        curl_opts+=(-H "Authorization: token ${GITHUB_TOKEN}")
+    fi
+    
+    # Use mktemp to avoid race conditions and symlink attacks
+    local tmp_file
+    tmp_file=$(mktemp) || return 1
+    
+    local http_code
     local latest_release
     if command -v grep &>/dev/null && grep --version 2>&1 | grep -q "GNU"; then
         # GNU grep com suporte a -P
-        latest_release=$(curl -sSf --max-time 10 \
-            "${api_url}/releases/latest" 2>/dev/null | \
-            grep -oP '"tag_name":\s*"\K[^"]+' | head -1)
+        http_code=$(curl "${curl_opts[@]}" -w "%{http_code}" -o "$tmp_file" \
+            "${api_url}/releases/latest" 2>/dev/null | tail -1 || echo "000")
+        if [[ "$http_code" == "200" ]]; then
+            latest_release=$(grep -oP '"tag_name":\s*"\K[^"]+' "$tmp_file" 2>/dev/null | head -1)
+        elif [[ "$http_code" == "403" ]] || [[ "$http_code" == "429" ]]; then
+            # Rate limited - increase cache TTL and use cached value if available
+            warning "GitHub API rate limited (HTTP $http_code). Using cached version or default branch."
+            cache_ttl=86400  # 24 hours instead of 1 hour
+            rm -f "$tmp_file"
+            return 1
+        fi
     else
         # Fallback para grep sem -P (macOS)
-        latest_release=$(curl -sSf --max-time 10 \
-            "${api_url}/releases/latest" 2>/dev/null | \
-            grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | \
-            sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
+        http_code=$(curl "${curl_opts[@]}" -w "%{http_code}" -o "$tmp_file" \
+            "${api_url}/releases/latest" 2>/dev/null | tail -1 || echo "000")
+        if [[ "$http_code" == "200" ]]; then
+            latest_release=$(grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' "$tmp_file" 2>/dev/null | \
+                sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
+        elif [[ "$http_code" == "403" ]] || [[ "$http_code" == "429" ]]; then
+            # Rate limited - increase cache TTL and use cached value if available
+            warning "GitHub API rate limited (HTTP $http_code). Using cached version or default branch."
+            cache_ttl=86400  # 24 hours instead of 1 hour
+            rm -f "$tmp_file"
+            return 1
+        fi
     fi
+    rm -f "$tmp_file"
     
     if [[ -n "$latest_release" ]]; then
         # Salvar no cache
@@ -170,7 +218,8 @@ get_latest_github_tag() {
     local repo_url="$1"
     local repo_hash
     repo_hash=$(generate_hash "$repo_url")
-    local cache_file="${CACHE_DIR:-$WORK_DIR/cache}/github_tag_${repo_hash}.cache"
+    local cache_root="${CACHE_DIR:-${WORK_DIR:-/tmp}/cache}"
+    local cache_file="${cache_root}/github_tag_${repo_hash}.cache"
     local cache_ttl=3600  # 1 hora
     
     # Verificar cache
@@ -200,18 +249,46 @@ get_latest_github_tag() {
     
     # Buscar última tag
     local latest_tag
+    # Support GITHUB_TOKEN for rate limit avoidance
+    # Remove -f to capture http_code even on 403/404
+    local curl_opts=(-sS --max-time 10)
+    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+        curl_opts+=(-H "Authorization: token ${GITHUB_TOKEN}")
+    fi
+    
+    # Use mktemp to avoid race conditions and symlink attacks
+    local tmp_file
+    tmp_file=$(mktemp) || return 1
+    
+    local http_code
+    local latest_tag
     if command -v grep &>/dev/null && grep --version 2>&1 | grep -q "GNU"; then
         # GNU grep com suporte a -P
-        latest_tag=$(curl -sSf --max-time 10 \
-            "${api_url}/tags?per_page=1" 2>/dev/null | \
-            grep -oP '"name":\s*"\K[^"]+' | head -1)
+        http_code=$(curl "${curl_opts[@]}" -w "%{http_code}" -o "$tmp_file" \
+            "${api_url}/tags?per_page=1" 2>/dev/null | tail -1 || echo "000")
+        if [[ "$http_code" == "200" ]]; then
+            latest_tag=$(grep -oP '"name":\s*"\K[^"]+' "$tmp_file" 2>/dev/null | head -1)
+        elif [[ "$http_code" == "403" ]] || [[ "$http_code" == "429" ]]; then
+            # Rate limited - increase cache TTL
+            cache_ttl=86400  # 24 hours instead of 1 hour
+            rm -f "$tmp_file"
+            return 1
+        fi
     else
         # Fallback para grep sem -P (macOS)
-        latest_tag=$(curl -sSf --max-time 10 \
-            "${api_url}/tags?per_page=1" 2>/dev/null | \
-            grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' | \
-            sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
+        http_code=$(curl "${curl_opts[@]}" -w "%{http_code}" -o "$tmp_file" \
+            "${api_url}/tags?per_page=1" 2>/dev/null | tail -1 || echo "000")
+        if [[ "$http_code" == "200" ]]; then
+            latest_tag=$(grep -o '"name"[[:space:]]*:[[:space:]]*"[^"]*"' "$tmp_file" 2>/dev/null | \
+                sed 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' | head -1)
+        elif [[ "$http_code" == "403" ]] || [[ "$http_code" == "429" ]]; then
+            # Rate limited - increase cache TTL
+            cache_ttl=86400  # 24 hours instead of 1 hour
+            rm -f "$tmp_file"
+            return 1
+        fi
     fi
+    rm -f "$tmp_file"
     
     if [[ -n "$latest_tag" ]]; then
         # Salvar no cache
@@ -235,10 +312,12 @@ verify_git_repository_integrity() {
         return 0  # Not a Git repository, skip verification
     fi
     
-    # Verify repository integrity
-    if ! git -C "$repo_path" fsck --no-progress --quiet >>"$LOG_FILE" 2>&1; then
-        warning "Git repository may be corrupted: $repo_path"
-        return 1
+    # Verify repository integrity (only in paranoid mode for performance)
+    if [[ ${PARANOID_MODE:-0} -eq 1 ]]; then
+        if ! git -C "$repo_path" fsck --no-progress --quiet >>"$LOG_FILE" 2>&1; then
+            warning "Git repository may be corrupted: $repo_path"
+            return 1
+        fi
     fi
     
     # If we have expected version, verify commit hash
@@ -312,8 +391,53 @@ detect_go_arch() {
 }
 
 # Post-installation health check (improved - more comprehensive)
+# Portable timeout wrapper (works on Linux and macOS)
+run_timeout() {
+    local timeout_sec="$1"
+    shift
+    
+    if command -v timeout &>/dev/null; then
+        timeout "$timeout_sec" "$@"
+    elif command -v gtimeout &>/dev/null; then
+        gtimeout "$timeout_sec" "$@"
+    else
+        # No timeout available, run without timeout
+        "$@"
+    fi
+}
+
+# Fast health check for bulk installations (optimized)
+health_check_tool_fast() {
+    local tool="$1"
+    
+    # 1. Check if command exists
+    if ! command -v "$tool" &>/dev/null; then
+        return 1
+    fi
+    
+    local tool_path
+    tool_path=$(command -v "$tool")
+    
+    # 2. Check if executable (fix if needed)
+    [[ -x "$tool_path" ]] || chmod +x "$tool_path" 2>/dev/null || return 1
+    
+    # 3. Quick version check (1s timeout, single attempt)
+    run_timeout 1 "$tool" --version &>/dev/null 2>&1 || true
+    
+    return 0
+}
+
+# Comprehensive health check (for paranoid mode or verbose)
 health_check_tool() {
     local tool="$1"
+    
+    # Use fast mode if not in paranoid mode
+    if [[ ${PARANOID_MODE:-0} -eq 0 ]]; then
+        health_check_tool_fast "$tool"
+        return $?
+    fi
+    
+    # Full health check (original logic)
     local issues=()
     
     # 1. Verificar se comando existe no PATH
@@ -365,11 +489,11 @@ health_check_tool() {
     fi
     
     # 5. Check if it executes without fatal errors (5s timeout)
-    if ! timeout 5 "$tool" --version &>/dev/null 2>&1; then
+    if ! run_timeout 5 "$tool" --version &>/dev/null 2>&1; then
         # Tentar versão alternativa
-        if ! timeout 5 "$tool" -version &>/dev/null 2>&1; then
+        if ! run_timeout 5 "$tool" -version &>/dev/null 2>&1; then
             # Tentar help
-            if ! timeout 5 "$tool" --help &>/dev/null 2>&1; then
+            if ! run_timeout 5 "$tool" --help &>/dev/null 2>&1; then
                 # Se todas falharam, verificar se é binário válido
                 if [[ -f "$tool_path" ]]; then
                     # For ELF binaries, check if it's a valid executable
@@ -416,29 +540,30 @@ health_check_tool() {
 }
 
 # Add tool to array in thread-safe way (for parallel installation)
+# Use PARENT_PID instead of $$ to ensure all jobs write to same files
 add_to_installed() {
     local tool="$1"
-    local result_file="/tmp/secbuild_installed_$$.tmp"
+    local result_file="/tmp/secbuild_installed_${PARENT_PID:-$$}.tmp"
     echo "$tool" >> "$result_file" 2>/dev/null || true
 }
 
 add_to_failed() {
     local tool="$1"
-    local result_file="/tmp/secbuild_failed_$$.tmp"
+    local result_file="/tmp/secbuild_failed_${PARENT_PID:-$$}.tmp"
     echo "$tool" >> "$result_file" 2>/dev/null || true
 }
 
 add_to_skipped() {
     local tool="$1"
-    local result_file="/tmp/secbuild_skipped_$$.tmp"
+    local result_file="/tmp/secbuild_skipped_${PARENT_PID:-$$}.tmp"
     echo "$tool" >> "$result_file" 2>/dev/null || true
 }
 
 # Consolidate results from temporary files to global arrays
 consolidate_parallel_results() {
-    local pid=$$
+    local pid="${PARENT_PID:-$$}"
     
-    # Consolidar instaladas
+    # Consolidate installed tools
     if [[ -f "/tmp/secbuild_installed_${pid}.tmp" ]]; then
         while IFS= read -r tool; do
             [[ -n "$tool" ]] && INSTALLED_TOOLS+=("$tool")
@@ -454,7 +579,7 @@ consolidate_parallel_results() {
         rm -f "/tmp/secbuild_failed_${pid}.tmp" 2>/dev/null
     fi
     
-    # Consolidar puladas
+    # Consolidate skipped tools
     if [[ -f "/tmp/secbuild_skipped_${pid}.tmp" ]]; then
         while IFS= read -r tool; do
             [[ -n "$tool" ]] && SKIPPED_TOOLS+=("$tool")
@@ -465,7 +590,8 @@ consolidate_parallel_results() {
 
 # Collect installation metrics
 collect_metrics() {
-    local metrics_file="${CACHE_DIR:-$WORK_DIR/cache}/metrics_$(date +%Y%m%d).json"
+    local cache_root="${CACHE_DIR:-${WORK_DIR:-/tmp}/cache}"
+    local metrics_file="${cache_root}/metrics_$(date +%Y%m%d).json"
     local start_time="${START_TIME:-$(date +%s)}"
     local end_time=$(date +%s)
     local duration=$((end_time - start_time))
@@ -536,37 +662,125 @@ install_go_tool_with_retry() {
     local goarch
     goarch=$(detect_go_arch)
     
-    # Go optimization flags
-    local go_flags="-ldflags=-s -w -trimpath"
-    
     # Check if package already has a version specifier (@version)
     local package_with_version="$package"
     if [[ "$package" != *@* ]]; then
         package_with_version="${package}@latest"
     fi
     
-    # Try methods in order of preference with adaptive retry
-    local methods=(
-        "GOARCH=$goarch go install $go_flags $package_with_version"
-        "GOARCH=$goarch go install $package_with_version"
-        "go get -u $package"
-        "GO111MODULE=on go get $package"
-    )
+    # Try methods in order: simple first (most reliable), then optimized
+    # Method 1: Simple install without flags (most reliable, try 2 times quickly)
+    debug "Attempting to install $tool_name via: GOARCH=$goarch go install $package_with_version"
+    if retry_with_adaptive_backoff 2 1 5 env GOARCH="$goarch" go install "$package_with_version"; then
+        return 0
+    fi
     
-    for method in "${methods[@]}"; do
-        debug "Attempting to install $tool_name via: $method"
-        
-        # Use adaptive retry (5 attempts, base delay 2s, max 30s)
-        if retry_with_adaptive_backoff 5 2 30 bash -c "$method"; then
+    # Method 2: With optimization flags (execute directly to preserve proper quoting)
+    debug "Attempting to install $tool_name via: GOARCH=$goarch go install -ldflags=\"-s -w\" -trimpath $package_with_version"
+    # Execute directly without bash -c to preserve flag quoting
+    local attempt=1
+    local max_attempts=2
+    local base_delay=1
+    local max_delay=5
+    
+    while [[ $attempt -le $max_attempts ]]; do
+        if GOARCH="$goarch" go install -ldflags="-s -w" -trimpath "$package_with_version" >>"$LOG_FILE" 2>&1; then
             return 0
         fi
+        
+        if [[ $attempt -lt $max_attempts ]]; then
+            local delay=$((base_delay * (2 ** (attempt - 1))))
+            [[ $delay -gt $max_delay ]] && delay=$max_delay
+            debug "Attempt $attempt/$max_attempts failed. Waiting ${delay}s before retrying..."
+            sleep "$delay"
+        fi
+        ((attempt++))
     done
+    
+    # Method 3: Fallback methods (legacy, try once each)
+    debug "Attempting to install $tool_name via: go get -u $package"
+    if go get -u "$package" >>"$LOG_FILE" 2>&1; then
+        return 0
+    fi
+    
+    debug "Attempting to install $tool_name via: GO111MODULE=on go get $package"
+    if env GO111MODULE=on go get "$package" >>"$LOG_FILE" 2>&1; then
+        return 0
+    fi
     
     error "Failed to install $tool_name after all attempts"
     return 1
 }
 
-# Instalar requirements Python de forma segura
+# Safe lock acquisition using mkdir (atomic operation, prevents zombie locks)
+acquire_lock_dir() {
+    local lock_dir="$1"
+    local timeout="${2:-300}"
+    local t0
+    t0=$(date +%s)
+    
+    while ! mkdir "$lock_dir" 2>/dev/null; do
+        local elapsed=$(($(date +%s) - t0))
+        if [[ $elapsed -ge $timeout ]]; then
+            # Timeout reached - check if lock is stale by PID (not mtime)
+            if [[ -f "$lock_dir/pid" ]]; then
+                local lock_pid
+                lock_pid=$(cat "$lock_dir/pid" 2>/dev/null || echo "")
+                if [[ -n "$lock_pid" ]] && ! kill -0 "$lock_pid" 2>/dev/null; then
+                    # PID doesn't exist - process is dead, remove stale lock
+                    rm -rf "$lock_dir" 2>/dev/null && continue
+                fi
+            fi
+            return 1
+        fi
+        sleep 0.1
+    done
+    
+    # Store PID in lock directory for stale detection
+    echo "$$" > "$lock_dir/pid" 2>/dev/null || true
+    return 0
+}
+
+# Generic lock wrapper (safe, no bash -c, uses arguments directly, dynamic FD)
+with_lock() {
+    local lock_file="$1"
+    shift
+    local lock_dir="${lock_file}.dir"
+    local fd rc
+    
+    if command -v flock &>/dev/null; then
+        # Use flock with dynamic FD (safe for nested locks)
+        exec {fd}>"$lock_file" || return 1
+        if flock -w 300 "$fd"; then
+            "$@"
+            rc=$?
+            exec {fd}>&-
+            return $rc
+        else
+            exec {fd}>&-
+            return 1
+        fi
+    else
+        # Fallback: mkdir-based lock (atomic, safe, with timeout)
+        if acquire_lock_dir "$lock_dir" 300; then
+            "$@"
+            rc=$?
+            # Use rm -rf because lock_dir contains pid file
+            rm -rf "$lock_dir" 2>/dev/null || true
+            return $rc
+        else
+            return 1
+        fi
+    fi
+}
+
+# Pip install with lock for thread-safe parallel operations
+pip_with_lock() {
+    local lock_file="/tmp/secbuild_pip.lock"
+    with_lock "$lock_file" "$@"
+}
+
+# Install Python requirements safely (optimized: no pip upgrade, uses lock)
 install_requirements_safe() {
     local req_file="$1"
     local tool_name="$2"
@@ -575,17 +789,40 @@ install_requirements_safe() {
         return 0
     fi
     
-    python3 -m pip install --upgrade pip >>"$LOG_FILE" 2>&1
-    
-    if python3 -m pip install -r "$req_file" --no-warn-script-location >>"$LOG_FILE" 2>&1; then
+    # Use lock for parallel safety and disable progress bar for speed
+    if pip_with_lock python3 -m pip install -r "$req_file" --no-warn-script-location --quiet --disable-pip-version-check >>"$LOG_FILE" 2>&1; then
         return 0
-    elif python3 -m pip install -r "$req_file" --user --no-warn-script-location >>"$LOG_FILE" 2>&1; then
+    elif pip_with_lock python3 -m pip install -r "$req_file" --user --no-warn-script-location --quiet --disable-pip-version-check >>"$LOG_FILE" 2>&1; then
         return 0
-    elif python3 -m pip install -r "$req_file" --break-system-packages >>"$LOG_FILE" 2>&1; then
+    elif pip_with_lock python3 -m pip install -r "$req_file" --break-system-packages --quiet --disable-pip-version-check >>"$LOG_FILE" 2>&1; then
         return 0
     fi
     
     return 1
+}
+
+# Git operations with lock per install_path to prevent race conditions
+# Validate Git ref/tag to prevent injection attacks
+# Validate Git ref/tag using Git's own validation (more robust than regex)
+is_safe_git_ref() {
+    # Use Git's built-in validation (handles edge cases like .., //, etc.)
+    if command -v git &>/dev/null; then
+        git check-ref-format --allow-onelevel "$1" >/dev/null 2>&1
+    else
+        # Fallback: basic validation if git is not available
+        [[ "$1" =~ ^[A-Za-z0-9._/-]+$ ]] && [[ "$1" != *..* ]] && [[ "$1" != *//* ]]
+    fi
+}
+
+git_with_path_lock() {
+    local install_path="$1"
+    shift
+    # Create lock file based on path hash to prevent concurrent operations on same repo
+    local path_hash
+    path_hash=$(sha256_hex "$install_path")
+    local lock_file="/tmp/secbuild_git_${path_hash}.lock"
+    
+    with_lock "$lock_file" "$@"
 }
 
 # Instalar do Git (com shallow clone, validação de URL e versão mais recente)
@@ -594,10 +831,12 @@ install_from_git() {
     local script_name="$2"
     local tool_name="$3"
     
-    # Validate URL before using
-    if ! validate_url "$repo_url"; then
-        warning "Invalid or inaccessible URL: $repo_url"
-        # Continue anyway, may be a temporary network issue
+    # Validate URL only if VALIDATE_URLS is enabled or in debug mode
+    if [[ ${VALIDATE_URLS:-0} -eq 1 ]] || [[ ${VERBOSE_MODE:-0} -eq 1 ]]; then
+        if ! validate_url "$repo_url"; then
+            warning "Invalid or inaccessible URL: $repo_url"
+            # Continue anyway, may be a temporary network issue
+        fi
     fi
     
     local repo_name="${repo_url##*/}"
@@ -617,8 +856,17 @@ install_from_git() {
         debug "Searching for latest stable version for $tool_name..."
         target_version=$(get_latest_github_release "$repo_url" 2>/dev/null | head -1)
         # Validate that target_version is actually a version (starts with number or 'v')
+        # Also validate it's safe to use as Git ref (prevent injection)
         if [[ -n "$target_version" ]] && ([[ "$target_version" =~ ^[0-9] ]] || [[ "$target_version" =~ ^v[0-9] ]]); then
-            info "Latest version found: $target_version"
+            if ! is_safe_git_ref "$target_version"; then
+                warning "Unsafe tag/ref from GitHub: $target_version. Falling back to default branch."
+                target_version=""
+            else
+                # Keep target_version intact for checkout/clone, only adjust display
+                local display_version="$target_version"
+                [[ "$display_version" != v* ]] && display_version="v$display_version"
+                info "Latest version found: $display_version"
+            fi
         else
             target_version=""
             debug "Could not get specific version, using default branch"
@@ -630,7 +878,12 @@ install_from_git() {
     # Hash may be in package.ini as separate attribute (to be implemented)
     # For now, we verify Git commit hash after clone
     
-    debug "Installing $tool_name from Git: $repo_url${target_version:+ (v$target_version)}"
+    # Display version without duplicating 'v' prefix
+    local version_display=""
+    if [[ -n "$target_version" ]]; then
+        version_display=" (${target_version})"
+    fi
+    debug "Installing $tool_name from Git: $repo_url$version_display"
     
     if [[ $DRY_RUN -eq 1 ]]; then
         info "Would clone/update repository: $repo_url${target_version:+@$target_version} -> $install_path"
@@ -647,44 +900,59 @@ install_from_git() {
             current_version=$(git -C "$install_path" describe --tags --exact-match 2>/dev/null || \
                              git -C "$install_path" rev-parse --short HEAD 2>/dev/null || echo "")
             
-            # Buscar tags remotas
-            git -C "$install_path" fetch --tags --quiet >>"$LOG_FILE" 2>&1
+            # Buscar tags remotas (with lock)
+            git_with_path_lock "$install_path" git -C "$install_path" fetch --tags --quiet >>"$LOG_FILE" 2>&1
             
-            # Verificar se já está na versão correta
+            # Verificar se já está na versão correta (use -- to prevent tag injection)
             if [[ "$current_version" == "$target_version" ]] || \
-               [[ "$(git -C "$install_path" rev-parse HEAD 2>/dev/null)" == "$(git -C "$install_path" rev-parse "$target_version" 2>/dev/null)" ]]; then
+               [[ "$(git -C "$install_path" rev-parse --verify --quiet HEAD 2>/dev/null)" == "$(git -C "$install_path" rev-parse --verify --quiet "${target_version}^{commit}" 2>/dev/null)" ]]; then
                 debug "Already at version $target_version"
                 save_to_cache "$cache_key" "$(date +%s)"
+                # Verify repository integrity (non-blocking)
+                verify_git_repository_integrity "$install_path" "$tool_name" "$target_version" || true
             else
-                # Fazer checkout da versão específica (tentar múltiplos formatos)
+                # Fazer checkout da versão específica (tentar múltiplos formatos, with lock)
                 local checkout_success=0
                 for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
-                    if git -C "$install_path" checkout -q "$checkout_method" >>"$LOG_FILE" 2>&1; then
+                    # Use -- to prevent tag injection (tags starting with -)
+                    if git_with_path_lock "$install_path" git -C "$install_path" checkout -q -- "$checkout_method" >>"$LOG_FILE" 2>&1; then
                         debug "Updated to version $target_version"
                         save_to_cache "$cache_key" "$(date +%s)"
                         checkout_success=1
+                        # Verify repository integrity (non-blocking)
+                        verify_git_repository_integrity "$install_path" "$tool_name" "$target_version" || true
                         break
                     fi
                 done
                 
                 if [[ $checkout_success -eq 0 ]]; then
                     warning "Failed to checkout version $target_version, using default branch"
-                    git -C "$install_path" pull -q --ff-only >>"$LOG_FILE" 2>&1 || true
+                    if git_with_path_lock "$install_path" git -C "$install_path" pull -q --ff-only >>"$LOG_FILE" 2>&1; then
+                        # Verify repository integrity (non-blocking)
+                        verify_git_repository_integrity "$install_path" "$tool_name" || true
+                    fi
                 fi
             fi
         else
-            # Sem versão específica, usar pull normal
-            if git -C "$install_path" fetch --dry-run &>/dev/null; then
-                if git -C "$install_path" pull -q --ff-only >>"$LOG_FILE" 2>&1; then
-                    debug "Repository updated: $repo_name"
+            # Sem versão específica, usar pull normal (skip fetch --dry-run for performance, with lock)
+            if git_with_path_lock "$install_path" git -C "$install_path" pull -q --ff-only >>"$LOG_FILE" 2>&1; then
+                debug "Repository updated: $repo_name"
+                save_to_cache "$cache_key" "$(date +%s)"
+                # Verify repository integrity (non-blocking)
+                verify_git_repository_integrity "$install_path" "$tool_name" || true
+            else
+                # Check if already up to date (pull returns 1 if no changes)
+                # origin/HEAD may not exist in newly cloned repos or detached tags
+                if git -C "$install_path" rev-parse --verify origin/HEAD >/dev/null 2>&1 && \
+                   git -C "$install_path" diff --quiet HEAD origin/HEAD 2>/dev/null; then
+                    debug "Repository already up to date: $repo_name"
                     save_to_cache "$cache_key" "$(date +%s)"
+                    # Verify repository integrity (non-blocking)
+                    verify_git_repository_integrity "$install_path" "$tool_name" || true
                 else
                     warning "Failed to update $repo_name"
                     return 1
                 fi
-            else
-                debug "Repositório já está atualizado"
-                save_to_cache "$cache_key" "$(date +%s)"
             fi
         fi
     else
@@ -696,96 +964,70 @@ install_from_git() {
         debug "Cloning repository..."
         mkdir -p "$(dirname "$install_path")"
         
-        # Se temos versão específica, clonar e fazer checkout
+        # Se temos versão específica, tentar clonar direto no branch/tag (mais rápido, with lock)
         if [[ -n "$target_version" ]]; then
-            # Clonar com tags para poder fazer checkout
-            if git clone --depth 1 --single-branch -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
-                # Buscar tags para ter acesso à versão específica
-                git -C "$install_path" fetch --tags --quiet >>"$LOG_FILE" 2>&1 || true
-                
-                # Tentar fazer checkout da versão (tentar múltiplos formatos)
-                local checkout_success=0
-                for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
-                    if git -C "$install_path" checkout -q "$checkout_method" >>"$LOG_FILE" 2>&1; then
+            # Try cloning directly to the tag/branch (fastest method)
+            local clone_success=0
+            for branch_option in "--branch $target_version" "--branch tags/$target_version" ""; do
+                if [[ -n "$branch_option" ]]; then
+                    if git_with_path_lock "$install_path" git clone --filter=blob:none --depth 1 $branch_option -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
                         debug "Repository cloned: $repo_name (version $target_version)"
-                        
-                        # NEW IMPROVEMENT: Verify cloned repository integrity
-                        verify_git_repository_integrity "$install_path" "$tool_name" "$target_version"
-                        
-                        save_to_cache "$cache_key" "$(date +%s)"
-                        checkout_success=1
+                        clone_success=1
                         break
                     fi
-                done
-                
-                if [[ $checkout_success -eq 0 ]]; then
-                    # If fails, try full clone with tags
-                    warning "Could not checkout version $target_version, cloning full repository..."
-                    rm -rf "$install_path"
-                    if git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
-                        checkout_success=0
+                else
+                    # Fallback: clone shallow then checkout
+                    if git_with_path_lock "$install_path" git clone --filter=blob:none --depth 1 -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
+                        git_with_path_lock "$install_path" git -C "$install_path" fetch --tags --quiet >>"$LOG_FILE" 2>&1 || true
                         for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
-                            if git -C "$install_path" checkout -q "$checkout_method" >>"$LOG_FILE" 2>&1; then
+                            if git_with_path_lock "$install_path" git -C "$install_path" checkout -q -- "$checkout_method" >>"$LOG_FILE" 2>&1; then
                                 debug "Repository cloned: $repo_name (version $target_version)"
-                                
-                                # Verify integrity
-                                verify_git_repository_integrity "$install_path" "$tool_name" "$target_version"
-                                
-                                save_to_cache "$cache_key" "$(date +%s)"
-                                checkout_success=1
+                                clone_success=1
                                 break
                             fi
                         done
-                        
-                        if [[ $checkout_success -eq 0 ]]; then
-                            warning "Failed to checkout version $target_version, using default branch"
-                            save_to_cache "$cache_key" "$(date +%s)"
-                        fi
-                    else
-                        error "Failed to clone $repo_name"
-                        return 1
+                        [[ $clone_success -eq 1 ]] && break
                     fi
                 fi
-            else
-                # Fallback to full clone
-                warning "Shallow clone failed, trying full clone..."
-                if git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
-                    if [[ -n "$target_version" ]]; then
-                        local checkout_success=0
-                        for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
-                            if git -C "$install_path" checkout -q "$checkout_method" >>"$LOG_FILE" 2>&1; then
-                                checkout_success=1
-                                break
-                            fi
-                        done
-                        [[ $checkout_success -eq 0 ]] && debug "Could not checkout version $target_version, using default branch"
-                    fi
-                    debug "Repository cloned: $repo_name"
-                    save_to_cache "$cache_key" "$(date +%s)"
+            done
+            
+            if [[ $clone_success -eq 0 ]]; then
+                # Last resort: full clone
+                warning "Optimized clone failed for $target_version, trying full clone..."
+                rm -rf "$install_path"
+                if git_with_path_lock "$install_path" git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
+                    for checkout_method in "$target_version" "tags/$target_version" "refs/tags/$target_version"; do
+                        if git_with_path_lock "$install_path" git -C "$install_path" checkout -q -- "$checkout_method" >>"$LOG_FILE" 2>&1; then
+                            debug "Repository cloned: $repo_name (version $target_version)"
+                            clone_success=1
+                            break
+                        fi
+                    done
+                    [[ $clone_success -eq 0 ]] && debug "Using default branch for $repo_name"
                 else
                     error "Failed to clone $repo_name"
                     return 1
                 fi
             fi
+            
+            save_to_cache "$cache_key" "$(date +%s)"
+            # Verify repository integrity (non-blocking)
+            verify_git_repository_integrity "$install_path" "$tool_name" "${target_version:-}" || true
         else
-            # No specific version, use normal shallow clone
-            if git clone --depth 1 --single-branch -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
+            # Sem versão específica, clonar shallow otimizado (with lock)
+            if git_with_path_lock "$install_path" git clone --filter=blob:none --depth 1 -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
                 debug "Repository cloned: $repo_name"
-                
-                # Verify integrity after clone
-                verify_git_repository_integrity "$install_path" "$tool_name"
-                
                 save_to_cache "$cache_key" "$(date +%s)"
+                # Verify repository integrity (non-blocking)
+                verify_git_repository_integrity "$install_path" "$tool_name" || true
             else
-                # Fallback to full clone if shallow fails
+                # Fallback to full clone
                 warning "Shallow clone failed, trying full clone..."
-                if git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
+                if git_with_path_lock "$install_path" git clone -q "$repo_url" "$install_path" >>"$LOG_FILE" 2>&1; then
                     debug "Repository cloned: $repo_name"
-                    
-                    # Verify integrity after clone
-                    verify_git_repository_integrity "$install_path" "$tool_name"
-                    
                     save_to_cache "$cache_key" "$(date +%s)"
+                    # Verify repository integrity (non-blocking)
+                    verify_git_repository_integrity "$install_path" "$tool_name" || true
                 else
                     error "Failed to clone $repo_name"
                     return 1
@@ -932,7 +1174,7 @@ install_with_cargo() {
         # Fallback to apt installation
         if ! command -v cargo &>/dev/null && [[ -z "${CARGO_BIN:-}" ]]; then
             info "Installing Rust via apt..."
-            if dry_run_exec "apt-get install -y -qq rustc cargo &>>\"$LOG_FILE\""; then
+            if apt_with_lock apt-get install -y -qq rustc cargo >>"$LOG_FILE" 2>&1; then
                 export PATH="/usr/bin:/usr/local/bin:$PATH"
                 if command -v cargo &>/dev/null; then
                     success "Rust installed successfully via apt"
@@ -1189,15 +1431,11 @@ is_installed_tool() {
     local tool="$1"
     
     # NEW IMPROVEMENT: Check installation cache first (much faster)
-    # Use set +u temporarily to safely check array
-    set +u
-    if [[ -n "${INSTALLED_CACHE[$tool]:-}" ]]; then
+    # Safe array access without modifying set -u
+    if [[ ${INSTALLED_CACHE[$tool]+_} ]]; then
         # Cache hit! Return immediately (0.001s vs 0.1-0.5s)
-        local cached_result="${INSTALLED_CACHE[$tool]}"
-        set -u
-        return "$cached_result"
+        return "${INSTALLED_CACHE[$tool]}"
     fi
-    set -u
     
     # Cache miss: check for real
     local binary
@@ -1215,14 +1453,11 @@ is_installed_tool() {
     done < <(binary_names_for_tool "$tool")
     
     # Save result to cache for next verifications
-    set +u
     if [[ $found -eq 1 ]]; then
         INSTALLED_CACHE[$tool]=0
-        set -u
         return 0
     else
         INSTALLED_CACHE[$tool]=1
-        set -u
         return 1
     fi
 }
@@ -1287,32 +1522,31 @@ install_single_tool() {
     
     local install_success=0
     
-    # Install dependencies
+    # Dependencies are now installed in batch during two-phase install
+    # Only install if not already done (for single tool installs or if batch failed)
     if [[ -n "$depends" ]]; then
-        debug "Installing dependencies: $depends"
-        apt_update_once
-        
-        # Split dependencies by comma and install each
+        # Check if dependencies are already installed (from batch install)
         local deps_array
         IFS=',' read -ra deps_array <<< "$depends"
-        local failed_deps=()
+        local missing_deps=()
         
         for dep in "${deps_array[@]}"; do
             # Trim whitespace
-            dep="${dep#"${dep%%[![:space:]]*}"}"
-            dep="${dep%"${dep##*[![:space:]]}"}"
+            dep=$(echo "$dep" | xargs)
             
-            if [[ -n "$dep" ]]; then
-                if ! dry_run_exec "apt-get install -y -qq $dep &>>\"$LOG_FILE\""; then
-                    [[ $DRY_RUN -eq 0 ]] && failed_deps+=("$dep")
-                else
-                    debug "$dep installed successfully"
-                fi
+            if [[ -n "$dep" ]] && ! pkg_installed_apt "$dep"; then
+                missing_deps+=("$dep")
             fi
         done
         
-        if [[ ${#failed_deps[@]} -gt 0 ]]; then
-            warning "Failed to install some dependencies: ${failed_deps[*]}"
+        # Only install missing dependencies (should be rare after batch install)
+        # Use lock to prevent parallel conflicts
+        if [[ ${#missing_deps[@]} -gt 0 ]]; then
+            debug "Installing missing dependencies: ${missing_deps[*]}"
+            apt_update_once
+            if ! apt_with_lock apt-get install -y -qq --no-install-recommends "${missing_deps[@]}" >>"$LOG_FILE" 2>&1; then
+                warning "Failed to install some dependencies: ${missing_deps[*]}"
+            fi
         fi
     fi
     
@@ -1365,7 +1599,7 @@ install_single_tool() {
     if [[ -z "$url" && -z "$post_install" ]]; then
         debug "Tentando instalar $tool_name via APT"
         apt_update_once
-        if dry_run_exec "apt-get install -y -qq $tool_name &>>\"$LOG_FILE\""; then
+        if apt_with_lock apt-get install -y -qq "$tool_name" >>"$LOG_FILE" 2>&1; then
             install_success=1
         fi
     fi
@@ -1405,12 +1639,118 @@ install_single_tool() {
     fi
 }
 
+# Performance timing helper
+time_tool() {
+    local name="$1"
+    shift
+    local t0=$(date +%s)
+    "$@"
+    local rc=$?
+    local t1=$(date +%s)
+    local duration=$((t1 - t0))
+    local cache_root="${CACHE_DIR:-${WORK_DIR:-/tmp}/cache}"
+    local timings_file="${cache_root}/timings.jsonl"
+    mkdir -p "$(dirname "$timings_file")"
+    # Use lock for thread-safe writing (even in serial mode for consistency)
+    local lock_file="/tmp/secbuild_timings.lock"
+    local json_line="{\"tool\":\"$name\",\"cmd\":\"$*\",\"rc\":$rc,\"sec\":$duration,\"ts\":$(date +%s)}"
+    # Use printf with argumentos posicionais to avoid shell injection
+    with_lock "$lock_file" bash -c 'printf "%s\n" "$1" >> "$2"' _ "$json_line" "$timings_file" 2>/dev/null || true
+    return $rc
+}
+
+# Collect all APT dependencies from all tools (two-phase install optimization)
+collect_all_apt_dependencies() {
+    declare -A all_deps=()
+    
+    info "Collecting all APT dependencies..."
+    
+    for tool_name in "${!TOOLS_REGISTRY[@]}"; do
+        IFS='|' read -r _url _script depends _post <<< "${TOOLS_REGISTRY[$tool_name]:-}"
+        
+        if [[ -n "$depends" ]]; then
+            # Split dependencies by comma
+            IFS=',' read -ra deps_array <<< "$depends"
+            for dep in "${deps_array[@]}"; do
+                # Trim whitespace
+                dep=$(echo "$dep" | xargs)
+                if [[ -n "$dep" ]]; then
+                    all_deps["$dep"]=1
+                fi
+            done
+        fi
+    done
+    
+    # Convert to array
+    local deps_list=()
+    for dep in "${!all_deps[@]}"; do
+        deps_list+=("$dep")
+    done
+    
+    echo "${deps_list[@]}"
+}
+
+# APT operations with lock to prevent parallel conflicts
+apt_with_lock() {
+    local lock_file="/tmp/secbuild_apt.lock"
+    with_lock "$lock_file" "$@"
+}
+
+# Install all APT dependencies in batch (two-phase install: Phase A)
+# Install in chunks to avoid command length limits
+install_all_apt_dependencies() {
+    local deps_list
+    deps_list=($(collect_all_apt_dependencies))
+    
+    if [[ ${#deps_list[@]} -eq 0 ]]; then
+        debug "No APT dependencies to install"
+        return 0
+    fi
+    
+    info "Installing ${#deps_list[@]} APT dependencies in batch..."
+    apt_update_once
+    
+    # Install in chunks of 50 packages to avoid command length limits
+    local chunk_size=50
+    local total=${#deps_list[@]}
+    local installed=0
+    local failed=0
+    
+    for ((i=0; i<total; i+=chunk_size)); do
+        local chunk=("${deps_list[@]:i:chunk_size}")
+        local chunk_num=$((i/chunk_size + 1))
+        local total_chunks=$(( (total + chunk_size - 1) / chunk_size ))
+        
+        debug "Installing chunk $chunk_num/$total_chunks (${#chunk[@]} packages)..."
+        
+        if apt_with_lock apt-get install -y -qq --no-install-recommends "${chunk[@]}" >>"$LOG_FILE" 2>&1; then
+            ((installed += ${#chunk[@]}))
+        else
+            ((failed += ${#chunk[@]}))
+            warning "Failed to install chunk $chunk_num"
+        fi
+    done
+    
+    if [[ $failed -eq 0 ]]; then
+        success "All APT dependencies installed successfully ($installed packages)"
+        return 0
+    else
+        warning "Some APT dependencies failed to install ($failed failed, $installed installed)"
+        return 1
+    fi
+}
+
 # Install all tools
 install_all_tools() {
     info "Starting installation of all tools..."
     
-    # Registrar tempo de início
+    # Register start time
     export START_TIME=$(date +%s)
+    
+    # TWO-PHASE INSTALL: Phase A - Install all APT dependencies in batch
+    if [[ $DRY_RUN -eq 0 ]]; then
+        install_all_apt_dependencies || warning "Some dependencies may need manual installation"
+    fi
     
     local tools_array=()
     for tool in "${!TOOLS_REGISTRY[@]}"; do
@@ -1425,7 +1765,7 @@ install_all_tools() {
         for tool in "${tools_array[@]}"; do
             ((current++))
             show_progress "$current" "$total" "Processing $tool..."
-            install_single_tool "$tool" || true
+            time_tool "$tool" install_single_tool "$tool" || true
         done
         echo
     fi
@@ -1438,6 +1778,10 @@ install_all_tools() {
 
 # Parallel installation (with wait -n and thread-safe arrays)
 install_tools_parallel() {
+    # CRITICAL: Ensure PARENT_PID is set and exported before any background jobs
+    : "${PARENT_PID:=$$}"
+    export PARENT_PID
+    
     local tools=("$@")
     local total=${#tools[@]}
     local current=0
@@ -1524,10 +1868,22 @@ install_tools_parallel() {
             fi
         done
         
-        # Start installation in background (with thread-safe flag)
+        # Start installation in background (with thread-safe flag and timing)
         (
+            local t0=$(date +%s)
             install_single_tool "$tool" 1 >/dev/null 2>&1
-            exit $?
+            local rc=$?
+            local t1=$(date +%s)
+            local duration=$((t1 - t0))
+            local cache_root="${CACHE_DIR:-${WORK_DIR:-/tmp}/cache}"
+    local timings_file="${cache_root}/timings.jsonl"
+            mkdir -p "$(dirname "$timings_file")"
+            # Use lock for thread-safe writing
+            local lock_file="/tmp/secbuild_timings.lock"
+            local json_line="{\"tool\":\"$tool\",\"rc\":$rc,\"sec\":$duration,\"ts\":$(date +%s)}"
+            # Use printf with argumentos posicionais to avoid shell injection
+            with_lock "$lock_file" bash -c 'printf "%s\n" "$1" >> "$2"' _ "$json_line" "$timings_file" 2>/dev/null || true
+            exit $rc
         ) &
         
         local pid=$!
@@ -1572,20 +1928,19 @@ install_profile() {
     
     info "Installing profile: $profile"
     
-    # Verificar se o perfil existe
-    set +u
-    local tools="${PROFILE_TOOLS[$profile]:-}"
-    set -u
+    # Verificar se o perfil existe (safe array access)
+    local tools=""
+    if [[ ${PROFILE_TOOLS[$profile]+_} ]]; then
+        tools="${PROFILE_TOOLS[$profile]}"
+    fi
     
     if [[ -z "$tools" ]]; then
         error "Profile '$profile' not found"
         echo
         info "Available profiles:"
-        set +u
         for p in "${!PROFILE_TOOLS[@]}"; do
             echo "  - $p"
         done
-        set -u
         return 1
     fi
     
@@ -1643,10 +1998,11 @@ get_tools_by_profile() {
         return 1
     fi
     
-    # Verificar se o perfil existe
-    set +u
-    local tools="${PROFILE_TOOLS[$profile]:-}"
-    set -u
+    # Verificar se o perfil existe (safe array access)
+    local tools=""
+    if [[ ${PROFILE_TOOLS[$profile]+_} ]]; then
+        tools="${PROFILE_TOOLS[$profile]}"
+    fi
     
     if [[ -z "$tools" ]]; then
         return 1
@@ -1660,9 +2016,11 @@ list_profiles() {
     echo -e "${CYAN}$(t 'profile.available')${RESET}"
     echo
     
-    set +u
-    local profile_count=${#PROFILE_TOOLS[@]}
-    set -u
+    # Safe array access
+    local profile_count=0
+    if [[ ${#PROFILE_TOOLS[@]} -gt 0 ]]; then
+        profile_count=${#PROFILE_TOOLS[@]}
+    fi
     
     if [[ $profile_count -eq 0 ]]; then
         warning "No profiles configured"
@@ -1671,16 +2029,15 @@ list_profiles() {
     
     # Ordenar perfis alfabeticamente
     local sorted_profiles
-    set +u
     sorted_profiles=$(printf '%s\n' "${!PROFILE_TOOLS[@]}" | sort)
-    set -u
     
     while IFS= read -r profile; do
         [[ -z "$profile" ]] && continue
         
-        set +u
-        local tool_list="${PROFILE_TOOLS[$profile]}"
-        set -u
+        local tool_list=""
+        if [[ ${PROFILE_TOOLS[$profile]+_} ]]; then
+            tool_list="${PROFILE_TOOLS[$profile]}"
+        fi
         local tool_count
         tool_count=$(echo "$tool_list" | wc -w)
         
@@ -1731,47 +2088,30 @@ install_core_dependencies() {
     
     apt_update_once
     
-    # Preparar para barra de progresso
-    local total_deps=${#core_deps[@]}
-    local current_dep=0
-    local failed_deps=()
-    local start_time=$(date +%s)
-    
+    # Filter out already installed packages
+    local missing_deps=()
     for dep in "${core_deps[@]}"; do
-        ((current_dep++))
-        
         if ! pkg_installed_apt "$dep"; then
-            # Show progress bar during installation
-            show_progress "$current_dep" "$total_deps" "$dep" "$start_time"
-            info "Installing $dep..."
-            
-            if ! dry_run_exec "apt-get install -y -qq $dep &>>\"$LOG_FILE\""; then
-                [[ $DRY_RUN -eq 0 ]] && failed_deps+=("$dep")
-            else
-                debug "$dep installed successfully"
-            fi
+            missing_deps+=("$dep")
         else
-            # Show progress even for already installed packages
-            show_progress "$current_dep" "$total_deps" "$dep (already installed)" "$start_time"
             debug "$dep already installed"
         fi
     done
     
-    # Clear progress bar
-    echo
-    
-    if [[ ${#failed_deps[@]} -gt 0 ]]; then
-        warning "Some dependencies failed: ${failed_deps[*]}"
-        warning "You may need to install them manually"
-    else
-        success "All core dependencies installed"
+    if [[ ${#missing_deps[@]} -eq 0 ]]; then
+        success "All core dependencies already installed"
+        return 0
     fi
     
-    if command -v pip3 &>/dev/null && [[ $DRY_RUN -eq 0 ]]; then
-        debug "Updating pip..."
-        pip3 install --upgrade pip >>"$LOG_FILE" 2>&1 || warning "Failed to update pip"
-    elif [[ $DRY_RUN -eq 1 ]]; then
-        info "Would update pip"
+    info "Installing ${#missing_deps[@]} core dependencies in batch..."
+    
+    # Install all missing core deps in batch (with lock)
+    if apt_with_lock apt-get install -y -qq --no-install-recommends "${missing_deps[@]}" >>"$LOG_FILE" 2>&1; then
+        success "Core dependencies installed successfully"
+        return 0
+    else
+        warning "Some core dependencies failed to install"
+        return 1
     fi
 }
 
@@ -1819,7 +2159,8 @@ apt_update_once() {
     fi
     
     info "Updating APT repositories..."
-    if apt-get update -qq 2>>"$ERROR_LOG"; then
+    # Use lock to prevent conflicts with parallel installs
+    if apt_with_lock apt-get update -qq >>"$ERROR_LOG" 2>&1; then
         APT_UPDATE_DONE=1
         success "APT repositories updated"
         return 0
