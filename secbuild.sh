@@ -1024,7 +1024,14 @@ main() {
             -p|--parallel)
                 PARALLEL_INSTALL=1
                 shift
-                [[ -n "${1:-}" && "$1" =~ ^[0-9]+$ ]] && { MAX_PARALLEL_JOBS="$1"; shift; }
+                if [[ -n "${1:-}" && "$1" =~ ^[0-9]+$ ]]; then
+                    if [[ "$1" =~ ^0+$ ]]; then
+                        error "Parallel job count must be greater than zero"
+                        exit 1
+                    fi
+                    MAX_PARALLEL_JOBS="$1"
+                    shift
+                fi
                 info "Parallel installation enabled (max: $MAX_PARALLEL_JOBS jobs)"
                 ;;
             --profile)

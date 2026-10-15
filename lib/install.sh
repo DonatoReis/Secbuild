@@ -2034,7 +2034,7 @@ install_tools_parallel() {
     local max_jobs=$MAX_PARALLEL_JOBS
     declare -a pids=()
     declare -A pid_to_tool=()
-    
+
     # Check if Bash supports wait -n (Bash 4.3+)
     local supports_wait_n=0
     if [[ "${BASH_VERSION%%.*}" -ge 4 ]]; then
